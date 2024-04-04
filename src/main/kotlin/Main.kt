@@ -3,7 +3,7 @@ import java.io.File
 data class Word(
     val original: String,
     val translate: String,
-    val correctAnswersCount: Int? = 0,
+    val correctAnswersCount: Int = 0,
 )
 
 fun main() {
@@ -12,8 +12,8 @@ fun main() {
 
     wordsFile.createNewFile()
 
-    wordsFile.writeText("hello|привет|1\n")
-    wordsFile.appendText("dog|собака|0\n")
+    wordsFile.writeText("hello|привет|3\n")
+    wordsFile.appendText("dog|собака|1\n")
     wordsFile.appendText("cat|кошка|0\n")
 
     wordsFile.forEachLine { line ->
@@ -23,5 +23,24 @@ fun main() {
 
     dictionary.forEach {
         println(it)
+    }
+
+    while (true) {
+        println("Меню: 1 – Учить слова, 2 – Статистика, 0 – Выход")
+
+        when (readln().toInt()) {
+            1 -> TODO()
+            2 -> {
+                val numberOfLearnedWords = dictionary.filter { it.correctAnswersCount >= 3 }.size
+                val numberOfWordsInDictionary = dictionary.size
+                val percentageOfLearnedWords =
+                    (numberOfLearnedWords.toDouble() / numberOfWordsInDictionary * 100).toInt()
+
+                println("Выучено $numberOfLearnedWords из $numberOfWordsInDictionary слов | $percentageOfLearnedWords%")
+            }
+
+            0 -> break
+            else -> println("Для управления вводите только 1, 2 или 0")
+        }
     }
 }
