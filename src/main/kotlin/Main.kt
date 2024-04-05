@@ -10,12 +10,6 @@ fun main() {
     val wordsFile: File = File("words.txt")
     val dictionary: MutableList<Word> = mutableListOf()
 
-    wordsFile.createNewFile()
-
-    wordsFile.writeText("hello|привет|3\n")
-    wordsFile.appendText("dog|собака|1\n")
-    wordsFile.appendText("cat|кошка|0\n")
-
     wordsFile.forEachLine { line ->
         val word = line.split("|")
         dictionary.add(Word(word[0], word[1], word[2].toIntOrNull() ?: 0))
@@ -31,7 +25,8 @@ fun main() {
         when (readln().toInt()) {
             1 -> TODO()
             2 -> {
-                val numberOfLearnedWords = dictionary.filter { it.correctAnswersCount >= 3 }.size
+                val numberOfLearnedWords =
+                    dictionary.filter { it.correctAnswersCount >= NUMBER_OF_CORRECT_ANSWERS }.size
                 val numberOfWordsInDictionary = dictionary.size
                 val percentageOfLearnedWords =
                     (numberOfLearnedWords.toDouble() / numberOfWordsInDictionary * 100).toInt()
@@ -44,3 +39,5 @@ fun main() {
         }
     }
 }
+
+const val NUMBER_OF_CORRECT_ANSWERS = 3
