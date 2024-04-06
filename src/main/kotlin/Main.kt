@@ -15,22 +15,30 @@ fun main() {
         dictionary.add(Word(word[0], word[1], word[2].toIntOrNull() ?: 0))
     }
 
-    dictionary.forEach {
-        println(it)
-    }
-
     while (true) {
         println("Меню: 1 – Учить слова, 2 – Статистика, 0 – Выход")
 
         when (readln().toInt()) {
-            1 -> TODO()
+            1 -> {
+                val questionWordsList = dictionary.filter { it.correctAnswersCount < NUMBER_OF_CORRECT_ANSWERS }
+                if (questionWordsList.isEmpty()) return println("Вы выучили все слова!")
+
+                for (word in questionWordsList.shuffled()) {
+                    val learnedWords = questionWordsList.shuffled().take(NUMBER_OF_ANSWERS).shuffled()
+                    println(learnedWords.random().original)
+
+                    learnedWords.shuffled().forEachIndexed { index, word ->
+                        println("${index + 1}. ${word.translate}")
+                    }
+                }
+            }
+
             2 -> {
                 val numberOfLearnedWords =
                     dictionary.filter { it.correctAnswersCount >= NUMBER_OF_CORRECT_ANSWERS }.size
                 val numberOfWordsInDictionary = dictionary.size
                 val percentageOfLearnedWords =
                     (numberOfLearnedWords.toDouble() / numberOfWordsInDictionary * 100).toInt()
-
                 println("Выучено $numberOfLearnedWords из $numberOfWordsInDictionary слов | $percentageOfLearnedWords%")
             }
 
@@ -41,3 +49,4 @@ fun main() {
 }
 
 const val NUMBER_OF_CORRECT_ANSWERS = 3
+const val NUMBER_OF_ANSWERS = 4
