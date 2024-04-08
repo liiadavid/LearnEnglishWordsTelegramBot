@@ -7,7 +7,7 @@ data class Word(
 )
 
 fun main() {
-    val wordsFile: File = File("words.txt")
+    val wordsFile = File("words.txt")
     val dictionary: MutableList<Word> = mutableListOf()
 
     wordsFile.forEachLine { line ->
@@ -20,24 +20,30 @@ fun main() {
 
         when (readln().toInt()) {
             1 -> {
-                val questionWordsList = dictionary.filter { it.correctAnswersCount < NUMBER_OF_CORRECT_ANSWERS }
+                for (word in dictionary.shuffled()) {
+                    val unlearnedWordsList = dictionary.filter { it.correctAnswersCount < NUMBER_OF_CORRECT_ANSWERS }
 
-                if (questionWordsList.isEmpty()) return println("Вы выучили все слова!")
+                    if (unlearnedWordsList.isEmpty()) {
+                        println("Вы выучили все слова!")
+                        break
+                    }
 
-                for (word in questionWordsList.shuffled()) {
-                    println(questionWordsList.random().original)
+                    val questionWordsList = unlearnedWordsList.shuffled().take(NUMBER_OF_ANSWERS).toMutableList()
+                    val questionWord = questionWordsList.random().original
 
-                    val answerWordsList = if (questionWordsList.size < NUMBER_OF_ANSWERS) {
+                    if (questionWordsList.size < NUMBER_OF_ANSWERS) {
                         val learnedWordsList =
                             dictionary.filter { it.correctAnswersCount >= NUMBER_OF_CORRECT_ANSWERS }.shuffled()
-                        questionWordsList.shuffled().take(NUMBER_OF_ANSWERS) +
-                                learnedWordsList.take(NUMBER_OF_ANSWERS - questionWordsList.size)
-                    } else {
-                        questionWordsList.shuffled().take(NUMBER_OF_ANSWERS)
-                    }.shuffled()
 
-                    answerWordsList.shuffled().forEachIndexed { index, word ->
-                        println("${index + 1}. ${word.translate}")
+                        questionWordsList +=
+                            learnedWordsList.take(NUMBER_OF_ANSWERS - questionWordsList.size).shuffled()
+                    }
+
+                    println()
+                    println(questionWord)
+
+                    questionWordsList.shuffled().forEachIndexed { index, answerWord ->
+                        println("${index + 1}. ${answerWord.translate}")
                     }
 
                     print("Вариант ответа: ")
