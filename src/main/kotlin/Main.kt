@@ -21,15 +21,27 @@ fun main() {
         when (readln().toInt()) {
             1 -> {
                 val questionWordsList = dictionary.filter { it.correctAnswersCount < NUMBER_OF_CORRECT_ANSWERS }
+
                 if (questionWordsList.isEmpty()) return println("Вы выучили все слова!")
 
                 for (word in questionWordsList.shuffled()) {
-                    val learnedWords = questionWordsList.shuffled().take(NUMBER_OF_ANSWERS).shuffled()
-                    println(learnedWords.random().original)
+                    println(questionWordsList.random().original)
 
-                    learnedWords.shuffled().forEachIndexed { index, word ->
+                    val answerWordsList = if (questionWordsList.size < NUMBER_OF_ANSWERS) {
+                        val learnedWordsList =
+                            dictionary.filter { it.correctAnswersCount >= NUMBER_OF_CORRECT_ANSWERS }.shuffled()
+                        questionWordsList.shuffled().take(NUMBER_OF_ANSWERS) +
+                                learnedWordsList.take(NUMBER_OF_ANSWERS - questionWordsList.size)
+                    } else {
+                        questionWordsList.shuffled().take(NUMBER_OF_ANSWERS)
+                    }.shuffled()
+
+                    answerWordsList.shuffled().forEachIndexed { index, word ->
                         println("${index + 1}. ${word.translate}")
                     }
+
+                    print("Вариант ответа: ")
+                    readln()
                 }
             }
 
