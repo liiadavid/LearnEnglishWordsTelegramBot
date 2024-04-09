@@ -7,7 +7,7 @@ data class Word(
 )
 
 fun main() {
-    val wordsFile: File = File("words.txt")
+    val wordsFile = File("words.txt")
     val dictionary: MutableList<Word> = mutableListOf()
 
     wordsFile.forEachLine { line ->
@@ -15,22 +15,48 @@ fun main() {
         dictionary.add(Word(word[0], word[1], word[2].toIntOrNull() ?: 0))
     }
 
-    dictionary.forEach {
-        println(it)
-    }
-
     while (true) {
         println("Меню: 1 – Учить слова, 2 – Статистика, 0 – Выход")
 
         when (readln().toInt()) {
-            1 -> TODO()
+            1 -> {
+                for (word in dictionary.shuffled()) {
+                    val unlearnedWordsList = dictionary.filter { it.correctAnswersCount < NUMBER_OF_CORRECT_ANSWERS }
+
+                    if (unlearnedWordsList.isEmpty()) {
+                        println("Вы выучили все слова!")
+                        break
+                    }
+
+                    val questionWordsList = unlearnedWordsList.shuffled().take(NUMBER_OF_ANSWERS).toMutableList()
+                    val questionWord = questionWordsList.random().original
+
+                    if (questionWordsList.size < NUMBER_OF_ANSWERS) {
+                        val learnedWordsList =
+                            dictionary.filter { it.correctAnswersCount >= NUMBER_OF_CORRECT_ANSWERS }.shuffled()
+
+                        questionWordsList +=
+                            learnedWordsList.take(NUMBER_OF_ANSWERS - questionWordsList.size).shuffled()
+                    }
+
+                    println()
+                    println(questionWord)
+
+                    questionWordsList.shuffled().forEachIndexed { index, answerWord ->
+                        println("${index + 1}. ${answerWord.translate}")
+                    }
+
+                    print("Вариант ответа: ")
+                    readln()
+                }
+            }
+
             2 -> {
                 val numberOfLearnedWords =
                     dictionary.filter { it.correctAnswersCount >= NUMBER_OF_CORRECT_ANSWERS }.size
                 val numberOfWordsInDictionary = dictionary.size
                 val percentageOfLearnedWords =
                     (numberOfLearnedWords.toDouble() / numberOfWordsInDictionary * 100).toInt()
-
                 println("Выучено $numberOfLearnedWords из $numberOfWordsInDictionary слов | $percentageOfLearnedWords%")
             }
 
@@ -41,3 +67,4 @@ fun main() {
 }
 
 const val NUMBER_OF_CORRECT_ANSWERS = 3
+const val NUMBER_OF_ANSWERS = 4
