@@ -15,7 +15,7 @@ fun main() {
         dictionary.add(Word(word[0], word[1], word[2].toIntOrNull() ?: 0))
     }
 
-    fun saveDictionary(dictionary: MutableList<Word>) {
+    fun saveDictionary(dictionary: List<Word>) {
         wordsFile.writeText("")
         dictionary.forEach { word ->
             wordsFile.appendText("${word.original}|${word.translate}|${word.correctAnswersCount}\n")
@@ -36,8 +36,6 @@ fun main() {
                     }
 
                     val questionWordsList = unlearnedWordsList.shuffled().take(NUMBER_OF_ANSWERS).toMutableList()
-                    val questionWord = questionWordsList.random()
-                    val questionWordId = questionWordsList.indexOf(questionWord) + 1
 
                     if (questionWordsList.size < NUMBER_OF_ANSWERS) {
                         val learnedWordsList =
@@ -46,6 +44,9 @@ fun main() {
                         questionWordsList +=
                             learnedWordsList.take(NUMBER_OF_ANSWERS - questionWordsList.size).shuffled()
                     }
+
+                    val questionWord = questionWordsList.random()
+                    val questionWordId = questionWordsList.indexOf(questionWord) + 1
 
                     println()
                     println(questionWord.original)

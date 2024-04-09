@@ -1,6 +1,6 @@
 hello|привет|3
 dog|собака|2
-cat|кошка|1
+cat|кошка|2
 rabbit|кролик|0
 hamster|хомяк|0
 parrot|попугай|0
