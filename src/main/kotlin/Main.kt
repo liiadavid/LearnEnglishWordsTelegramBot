@@ -3,7 +3,7 @@ import java.io.File
 data class Word(
     val original: String,
     val translate: String,
-    val correctAnswersCount: Int = 0,
+    var correctAnswersCount: Int = 0,
 )
 
 fun main() {
@@ -13,6 +13,13 @@ fun main() {
     wordsFile.forEachLine { line ->
         val word = line.split("|")
         dictionary.add(Word(word[0], word[1], word[2].toIntOrNull() ?: 0))
+    }
+
+    fun saveDictionary(dictionary: MutableList<Word>) {
+        wordsFile.writeText("")
+        dictionary.forEach { word ->
+            wordsFile.appendText("${word.original}|${word.translate}|${word.correctAnswersCount}\n")
+        }
     }
 
     while (true) {
@@ -29,7 +36,8 @@ fun main() {
                     }
 
                     val questionWordsList = unlearnedWordsList.shuffled().take(NUMBER_OF_ANSWERS).toMutableList()
-                    val questionWord = questionWordsList.random().original
+                    val questionWord = questionWordsList.random()
+                    val questionWordId = questionWordsList.indexOf(questionWord) + 1
 
                     if (questionWordsList.size < NUMBER_OF_ANSWERS) {
                         val learnedWordsList =
@@ -40,14 +48,24 @@ fun main() {
                     }
 
                     println()
-                    println(questionWord)
+                    println(questionWord.original)
 
-                    questionWordsList.shuffled().forEachIndexed { index, answerWord ->
+                    questionWordsList.forEachIndexed { index, answerWord ->
                         println("${index + 1}. ${answerWord.translate}")
                     }
 
+                    println("0. вернуться в меню")
                     print("Вариант ответа: ")
-                    readln()
+                    val userAnswer = readln().toInt()
+
+                    when (userAnswer) {
+                        questionWordId -> {
+                            questionWord.correctAnswersCount++
+                            saveDictionary(dictionary)
+                        }
+
+                        0 -> break
+                    }
                 }
             }
 
