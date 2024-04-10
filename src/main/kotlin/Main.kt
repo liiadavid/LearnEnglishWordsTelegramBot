@@ -39,7 +39,6 @@ fun main() {
 
                         val questionWordsList = unlearnedWordsList.shuffled().take(NUMBER_OF_ANSWERS).toMutableList()
                         val questionWord = questionWordsList.random()
-                        val questionWordId = questionWordsList.indexOf(questionWord) + 1
 
                         if (questionWordsList.size < NUMBER_OF_ANSWERS) {
                             val learnedWordsList =
@@ -49,7 +48,9 @@ fun main() {
                                 learnedWordsList.take(NUMBER_OF_ANSWERS - questionWordsList.size).shuffled()
                         }
 
+                        val questionWordId = questionWordsList.indexOf(questionWord) + 1
                         println()
+
                         println(questionWord.original)
 
                         questionWordsList.forEachIndexed { index, answerWord ->
