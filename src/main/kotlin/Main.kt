@@ -72,6 +72,7 @@ fun main() {
                             else -> println("Ответ неверный.")
                         }
                     }
+                    break
                 }
             }
 
