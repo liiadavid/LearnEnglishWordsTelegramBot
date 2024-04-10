@@ -25,7 +25,7 @@ fun main() {
     while (true) {
         println("Меню: 1 – Учить слова, 2 – Статистика, 0 – Выход")
 
-        when (readln().toInt()) {
+        when (readln().toIntOrNull()) {
             1 -> {
                 for (word in dictionary.shuffled()) {
                     val unlearnedWordsList = dictionary.filter { it.correctAnswersCount < NUMBER_OF_CORRECT_ANSWERS }
@@ -35,37 +35,41 @@ fun main() {
                         break
                     }
 
-                    val questionWordsList = unlearnedWordsList.shuffled().take(NUMBER_OF_ANSWERS).toMutableList()
+                    for (unlearnedWord in unlearnedWordsList) {
 
-                    if (questionWordsList.size < NUMBER_OF_ANSWERS) {
-                        val learnedWordsList =
-                            dictionary.filter { it.correctAnswersCount >= NUMBER_OF_CORRECT_ANSWERS }.shuffled()
+                        val questionWordsList = unlearnedWordsList.shuffled().take(NUMBER_OF_ANSWERS).toMutableList()
+                        val questionWord = questionWordsList.random()
+                        val questionWordId = questionWordsList.indexOf(questionWord) + 1
 
-                        questionWordsList +=
-                            learnedWordsList.take(NUMBER_OF_ANSWERS - questionWordsList.size).shuffled()
-                    }
+                        if (questionWordsList.size < NUMBER_OF_ANSWERS) {
+                            val learnedWordsList =
+                                dictionary.filter { it.correctAnswersCount >= NUMBER_OF_CORRECT_ANSWERS }.shuffled()
 
-                    val questionWord = questionWordsList.random()
-                    val questionWordId = questionWordsList.indexOf(questionWord) + 1
-
-                    println()
-                    println(questionWord.original)
-
-                    questionWordsList.forEachIndexed { index, answerWord ->
-                        println("${index + 1}. ${answerWord.translate}")
-                    }
-
-                    println("0. вернуться в меню")
-                    print("Вариант ответа: ")
-                    val userAnswer = readln().toInt()
-
-                    when (userAnswer) {
-                        questionWordId -> {
-                            questionWord.correctAnswersCount++
-                            saveDictionary(dictionary)
+                            questionWordsList +=
+                                learnedWordsList.take(NUMBER_OF_ANSWERS - questionWordsList.size).shuffled()
                         }
 
-                        0 -> break
+                        println()
+                        println(questionWord.original)
+
+                        questionWordsList.forEachIndexed { index, answerWord ->
+                            println("${index + 1}. ${answerWord.translate}")
+                        }
+
+                        println("0. вернуться в меню")
+                        print("Вариант ответа: ")
+                        val userAnswer = readln().toIntOrNull()
+
+                        when (userAnswer) {
+                            questionWordId -> {
+                                println("Верно!")
+                                questionWord.correctAnswersCount++
+                                saveDictionary(dictionary)
+                            }
+
+                            0 -> break
+                            else -> println("Ответ неверный.")
+                        }
                     }
                 }
             }
