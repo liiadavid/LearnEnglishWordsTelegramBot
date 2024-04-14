@@ -1,21 +1,27 @@
 fun main(args: Array<String>) {
     val botToken = args[0]
+    val bot = TelegramBotService(botToken)
     var updateId = 0
-    val bot = TelegramBotService()
+    var updates: String
+    var updateIdRegex: String?
+    var chatId: String?
+    var messageTextRegex: String?
+    var text = ""
+    var message: String
 
     while (true) {
-        Thread.sleep(2000)
-        val updates: String = bot.getUpdates(botToken, updateId)
+        Thread.sleep(MILLIS)
+        updates = bot.getUpdates(updateId)
         println(updates)
-        val updateIdRegex = "\"update_id\":(.+?),".toRegex().find(updates)?.groups?.get(1)?.value
+        updateIdRegex = "\"update_id\":(.+?),".toRegex().find(updates)?.groups?.get(1)?.value
         updateId = (updateIdRegex?.toInt()?.plus(1)) ?: continue
 
-        val messageTextRegex: Regex = "\"text\":\"(.+?)\"".toRegex()
-        val matchResult: MatchResult? = messageTextRegex.find(updates)
-        val groups = matchResult?.groups
-        val text = groups?.get(1)?.value
-        val chatId = "\"id\":(.+?),".toRegex().find(updates)?.groups?.get(1)?.value
-        val message = bot.sendMessage(botToken, chatId, text)
+        chatId = "\"id\":(.+?),".toRegex().find(updates)?.groups?.get(1)?.value
+        messageTextRegex = "\"text\":\"(.+?)\"".toRegex().find(updates)?.groups?.get(1)?.value
+        if (messageTextRegex.equals("Hello")) text = "Hello"
+        message = bot.sendMessage(chatId, text)
         println(message)
     }
 }
+
+const val MILLIS: Long = 2000
