@@ -14,26 +14,29 @@ fun main(args: Array<String>) {
     var statistics: Statistics
     var question: Question?
 
+    fun checkNextQuestionAndSend(chatId: String?) {
+        if (trainer.getNextQuestion() == null) bot.sendMessage(chatId, "Вы выучили все слова в базе")
+        else bot.sendQuestion(chatId, trainer.getNextQuestion())
+    }
+
     while (true) {
         Thread.sleep(MILLIS)
         updates = bot.getUpdates(updateId)
         println(updates)
         updateId = (updateIdRegex.find(updates)?.groups?.get(1)?.value?.toInt()?.plus(1)) ?: continue
-        chatId = chatIdRegex.find(updates)?.groups?.get(1)?.value
+        chatId = chatIdRegex.find(updates)?.groups?.get(1)?.value ?: continue
         messageText = messageTextRegex.find(updates)?.groups?.get(1)?.value
         data = dataRegex.find(updates)?.groups?.get(1)?.value
         statistics = trainer.getStatistics()
 
-        if (messageText?.lowercase() == "hello" && chatId != null)
-            bot.sendMessage(chatId, "Hello")
-        if (messageText?.lowercase() == "/start" && chatId != null)
+        if (messageText?.lowercase() == "/start")
             bot.sendMenu(chatId)
-        if (data?.lowercase() == DATA_STATISTICS && chatId != null)
+        if (data?.lowercase() == DATA_STATISTICS)
             bot.sendMessage(
                 chatId, "Выучено ${statistics.numberOfLearnedWords} из " +
                         "${statistics.numberOfWordsInDictionary} слов | ${statistics.percentageOfLearnedWords}%"
             )
-        if (data?.lowercase() == DATA_LEARN_WORDS && chatId != null) {
+        if (data?.lowercase() == DATA_LEARN_WORDS) {
             question = trainer.getNextQuestion()
             if (question == null) bot.sendMessage(chatId, "Вы выучили все слова в базе")
             else bot.sendQuestion(chatId, question)
@@ -46,7 +49,7 @@ fun main(args: Array<String>) {
                 "Не правильно: ${trainer.question?.correctAnswer?.original} - " +
                         "${trainer.question?.correctAnswer?.translate}"
             )
-            bot.checkNextQuestionAndSend(trainer, chatId)
+            checkNextQuestionAndSend(chatId)
         }
 
     }

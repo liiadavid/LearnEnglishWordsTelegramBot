@@ -11,7 +11,7 @@ class TelegramBotService(
     private val client: HttpClient = HttpClient.newBuilder().build()
 
     fun getUpdates(updateId: Int): String {
-        val urlGetUpdates = "https://api.telegram.org/bot$botToken/getUpdates?offset=$updateId"
+        val urlGetUpdates = "$API_BOT$botToken/getUpdates?offset=$updateId"
         val request: HttpRequest = HttpRequest.newBuilder().uri(URI.create(urlGetUpdates)).build()
         val response: HttpResponse<String> = client.send(request, HttpResponse.BodyHandlers.ofString())
 
@@ -20,7 +20,7 @@ class TelegramBotService(
 
     fun sendMessage(chatId: String?, message: String?): String {
         val encoded = URLEncoder.encode(message, StandardCharsets.UTF_8)
-        val urlSendMessage = "https://api.telegram.org/bot$botToken/sendMessage?chat_id=$chatId&text=$encoded"
+        val urlSendMessage = "$API_BOT$botToken/sendMessage?chat_id=$chatId&text=$encoded"
         val request: HttpRequest = HttpRequest.newBuilder().uri(URI.create(urlSendMessage)).build()
         val response: HttpResponse<String> = client.send(request, HttpResponse.BodyHandlers.ofString())
 
@@ -28,7 +28,7 @@ class TelegramBotService(
     }
 
     fun sendMenu(chatId: String?): String {
-        val urlSendMessage = "https://api.telegram.org/bot$botToken/sendMessage"
+        val urlSendMessage = "$API_BOT$botToken/sendMessage"
         val sendMenuBody = """
             {
                 "chat_id": $chatId,
@@ -59,7 +59,7 @@ class TelegramBotService(
     }
 
     fun sendQuestion(chatId: String?, question: Question?): String {
-        val urlSendMessage = "https://api.telegram.org/bot$botToken/sendMessage"
+        val urlSendMessage = "$API_BOT$botToken/sendMessage"
         val questionVariants: MutableList<String> = mutableListOf()
         question?.variants?.forEachIndexed { index, _ ->
             questionVariants.add(
@@ -89,10 +89,7 @@ class TelegramBotService(
         return response.body()
     }
 
-    fun checkNextQuestionAndSend(trainer: LearnWordsTrainer, chatId: String?) {
-        if (trainer.getNextQuestion() == null) sendMessage(chatId, "Вы выучили все слова в базе")
-        else sendQuestion(chatId, trainer.getNextQuestion())
-    }
 }
 
 const val CALLBACK_DATA_ANSWER_PREFIX = "answer_"
+const val API_BOT = "https://api.telegram.org/bot"
