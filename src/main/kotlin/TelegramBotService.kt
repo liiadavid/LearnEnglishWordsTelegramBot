@@ -1,26 +1,95 @@
 import java.net.URI
+import java.net.URLEncoder
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
+import java.nio.charset.StandardCharsets
 
 class TelegramBotService(
-    val botToken: String,
+    private val botToken: String,
 ) {
-    val client: HttpClient = HttpClient.newBuilder().build()
+    private val client: HttpClient = HttpClient.newBuilder().build()
 
     fun getUpdates(updateId: Int): String {
-        val urlGetUpdates = "https://api.telegram.org/bot$botToken/getUpdates?offset=$updateId"
+        val urlGetUpdates = "$API_BOT$botToken/getUpdates?offset=$updateId"
         val request: HttpRequest = HttpRequest.newBuilder().uri(URI.create(urlGetUpdates)).build()
         val response: HttpResponse<String> = client.send(request, HttpResponse.BodyHandlers.ofString())
 
         return response.body()
     }
 
-    fun sendMessage(chatId: String?, text: String?): String {
-        val urlSendMessage = "https://api.telegram.org/bot$botToken/sendMessage?chat_id=$chatId&text=$text"
+    fun sendMessage(chatId: String?, message: String?): String {
+        val encoded = URLEncoder.encode(message, StandardCharsets.UTF_8)
+        val urlSendMessage = "$API_BOT$botToken/sendMessage?chat_id=$chatId&text=$encoded"
         val request: HttpRequest = HttpRequest.newBuilder().uri(URI.create(urlSendMessage)).build()
         val response: HttpResponse<String> = client.send(request, HttpResponse.BodyHandlers.ofString())
 
         return response.body()
     }
+
+    fun sendMenu(chatId: String?): String {
+        val urlSendMessage = "$API_BOT$botToken/sendMessage"
+        val sendMenuBody = """
+            {
+                "chat_id": $chatId,
+                "text": "Основное меню",
+                "reply_markup": {
+                    "inline_keyboard": [
+                        [
+                            {
+                                "text": "Изучить слова",
+                                "callback_data": "learn_words_clicked"
+                            },
+                            {
+                                "text": "Статистика",
+                                "callback_data": "statistics_clicked"
+                            }
+                        ]
+                    ]
+                }
+            }
+        """.trimIndent()
+        val request: HttpRequest = HttpRequest.newBuilder().uri(URI.create(urlSendMessage))
+            .header("Content-type", "application/json")
+            .POST(HttpRequest.BodyPublishers.ofString(sendMenuBody))
+            .build()
+        val response: HttpResponse<String> = client.send(request, HttpResponse.BodyHandlers.ofString())
+
+        return response.body()
+    }
+
+    fun sendQuestion(chatId: String?, question: Question?): String {
+        val urlSendMessage = "$API_BOT$botToken/sendMessage"
+        val questionVariants: MutableList<String> = mutableListOf()
+        question?.variants?.forEachIndexed { index, _ ->
+            questionVariants.add(
+                "{\n\t\"text\": \"${question.variants[index].translate}\"," +
+                        "\n\t\"callback_data\": \"$CALLBACK_DATA_ANSWER_PREFIX$index\"\n}"
+            )
+        }
+        val sendQuestionBody = """
+            {
+                "chat_id": $chatId,
+                "text": "${question?.correctAnswer?.original}",
+                "reply_markup": {
+                    "inline_keyboard": [
+                        [
+                            ${questionVariants.joinToString(",\n")}
+                        ]
+                    ]
+                }
+            }
+        """.trimIndent()
+        val request: HttpRequest = HttpRequest.newBuilder().uri(URI.create(urlSendMessage))
+            .header("Content-type", "application/json")
+            .POST(HttpRequest.BodyPublishers.ofString(sendQuestionBody))
+            .build()
+        val response: HttpResponse<String> = client.send(request, HttpResponse.BodyHandlers.ofString())
+
+        return response.body()
+    }
+
 }
+
+const val CALLBACK_DATA_ANSWER_PREFIX = "answer_"
+const val API_BOT = "https://api.telegram.org/bot"
