@@ -33,16 +33,18 @@ data class InlineKeyBoard(
 
 class TelegramBotService(
     private val botToken: String,
-    private val json: Json,
+    private val json: Json = Json {
+    ignoreUnknownKeys = true
+},
 ) {
     private val client: HttpClient = HttpClient.newBuilder().build()
 
-    fun getUpdates(updateId: Long): String {
+    fun getUpdates(updateId: Long): Response {
         val urlGetUpdates = "$API_BOT$botToken/getUpdates?offset=$updateId"
         val request: HttpRequest = HttpRequest.newBuilder().uri(URI.create(urlGetUpdates)).build()
         val response: HttpResponse<String> = client.send(request, HttpResponse.BodyHandlers.ofString())
 
-        return response.body()
+        return json.decodeFromString(response.body())
     }
 
     fun sendMessage(chatId: Long, message: String?): String {
@@ -99,19 +101,29 @@ class TelegramBotService(
 
     fun sendQuestion(chatId: Long, question: Question?): String {
         val urlSendMessage = "$API_BOT$botToken/sendMessage"
+        val variantsOfAnswer = question?.variants?.mapIndexed { index, word ->
+            listOf(
+                InlineKeyBoard(
+                    text = word.translate,
+                    callbackData = CALLBACK_DATA_ANSWER_PREFIX + index
+                )
+            )
+        }?.toMutableList()
+        val variantMenu = listOf(
+            InlineKeyBoard(
+                text = "в меню",
+                callbackData = DATA_MENU
+            )
+        )
+        variantsOfAnswer?.add(variantMenu)
         val requestBody = SendMessageRequest(
             chatId = chatId,
             text = question?.correctAnswer?.original,
-            replyMarkup = ReplyMarkup(
-                listOf(
-                    question?.variants?.mapIndexed { index, word ->
-                        InlineKeyBoard(
-                            text = word.translate,
-                            callbackData = CALLBACK_DATA_ANSWER_PREFIX + index
-                        )
-                    }
+            replyMarkup = variantsOfAnswer?.let {
+                ReplyMarkup(
+                    it
                 )
-            )
+            }
         )
         val requestBodyString = json.encodeToString(requestBody)
         val request: HttpRequest = HttpRequest.newBuilder().uri(URI.create(urlSendMessage))

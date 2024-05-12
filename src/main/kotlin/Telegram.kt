@@ -1,6 +1,5 @@
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
 
 @Serializable
 data class Update(
@@ -41,14 +40,10 @@ data class Chat(
 )
 
 fun main(args: Array<String>) {
-    val json = Json {
-        ignoreUnknownKeys = true
-    }
     val botToken = args[0]
-    val bot = TelegramBotService(botToken, json)
+    val bot = TelegramBotService(botToken)
     val trainers = HashMap<Long, LearnWordsTrainer>()
     var trainer = LearnWordsTrainer()
-    var responseString: String
     var response: Response
     var sortedUpdates: List<Update>
     var lastUpdateId = 0L
@@ -70,16 +65,16 @@ fun main(args: Array<String>) {
         data = update.callbackQuery?.data
         statistics = trainer.getStatistics()
 
-        trainer = trainers.getOrPut(chatId) {LearnWordsTrainer("$chatId.txt")}
+        trainer = trainers.getOrPut(chatId) { LearnWordsTrainer("$chatId.txt") }
 
-        if (message?.lowercase() == "/start")
+        if (message?.lowercase() == DATA_MENU)
             bot.sendMenu(chatId)
         if (data?.lowercase() == DATA_STATISTICS)
             bot.sendMessage(
                 chatId, "Выучено ${statistics.numberOfLearnedWords} из " +
                         "${statistics.numberOfWordsInDictionary} слов | ${statistics.percentageOfLearnedWords}%"
             )
-        if (data?.lowercase() ==  DATA_RESET_STATISTICS) {
+        if (data?.lowercase() == DATA_RESET_STATISTICS) {
             trainer.resetProgress()
             bot.sendMessage(chatId, "Прогресс обнулён")
         }
@@ -98,13 +93,14 @@ fun main(args: Array<String>) {
             )
             checkNextQuestionAndSend(chatId)
         }
+        if (data?.lowercase() == DATA_MENU)
+            bot.sendMenu(chatId)
     }
 
     while (true) {
         Thread.sleep(MILLIS)
-        responseString = bot.getUpdates(lastUpdateId)
-        println(responseString)
-        response = json.decodeFromString(responseString)
+        response = bot.getUpdates(lastUpdateId)
+        println(response)
         if (response.result.isEmpty()) continue
         sortedUpdates = response.result.sortedBy { it.updateId }
         sortedUpdates.forEach { handleUpdate(it, trainers) }
@@ -116,3 +112,4 @@ const val MILLIS: Long = 2000
 const val DATA_STATISTICS = "statistics_clicked"
 const val DATA_LEARN_WORDS = "learn_words_clicked"
 const val DATA_RESET_STATISTICS = "reset_statistics_clicked"
+const val DATA_MENU = "/start"
