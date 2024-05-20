@@ -33,21 +33,23 @@ data class InlineKeyBoard(
 
 class TelegramBotService(
     private val botToken: String,
-    private val json: Json = Json {
-    ignoreUnknownKeys = true
-},
 ) {
+    private val json: Json = Json { ignoreUnknownKeys = true }
     private val client: HttpClient = HttpClient.newBuilder().build()
 
-    fun getUpdates(updateId: Long): Response {
+    fun getUpdates(updateId: Long): Response? {
         val urlGetUpdates = "$API_BOT$botToken/getUpdates?offset=$updateId"
         val request: HttpRequest = HttpRequest.newBuilder().uri(URI.create(urlGetUpdates)).build()
-        val response: HttpResponse<String> = client.send(request, HttpResponse.BodyHandlers.ofString())
 
-        return json.decodeFromString(response.body())
+        val responseResult: Result<HttpResponse<String>> =
+            runCatching { client.send(request, HttpResponse.BodyHandlers.ofString()) }
+        return if (responseResult.isSuccess)
+            responseResult.getOrNull()?.body()?.let { json.decodeFromString(it) }
+        else
+            null
     }
 
-    fun sendMessage(chatId: Long, message: String?): String {
+    fun sendMessage(chatId: Long, message: String?): String? {
         val urlSendMessage = "$API_BOT$botToken/sendMessage"
         val requestBody = SendMessageRequest(
             chatId = chatId,
@@ -58,12 +60,17 @@ class TelegramBotService(
             .header("Content-type", "application/json")
             .POST(HttpRequest.BodyPublishers.ofString(requestBodyString))
             .build()
-        val response: HttpResponse<String> = client.send(request, HttpResponse.BodyHandlers.ofString())
 
-        return response.body()
+        val responseResult: Result<HttpResponse<String>> =
+            runCatching { client.send(request, HttpResponse.BodyHandlers.ofString()) }
+
+        return if (responseResult.isSuccess)
+            responseResult.getOrNull()?.body()?.let { json.decodeFromString(it) }
+        else
+            null
     }
 
-    fun sendMenu(chatId: Long): String {
+    fun sendMenu(chatId: Long): String? {
         val urlSendMessage = "$API_BOT$botToken/sendMessage"
         val requestBody = SendMessageRequest(
             chatId = chatId,
@@ -94,45 +101,51 @@ class TelegramBotService(
             .header("Content-type", "application/json")
             .POST(HttpRequest.BodyPublishers.ofString(requestBodyString))
             .build()
-        val response: HttpResponse<String> = client.send(request, HttpResponse.BodyHandlers.ofString())
 
-        return response.body()
+        val responseResult: Result<HttpResponse<String>> =
+            runCatching { client.send(request, HttpResponse.BodyHandlers.ofString()) }
+        return if (responseResult.isSuccess)
+            responseResult.getOrNull()?.body()?.let { json.decodeFromString(it) }
+        else
+            null
     }
 
-    fun sendQuestion(chatId: Long, question: Question?): String {
+    fun sendQuestion(chatId: Long, question: Question): String? {
         val urlSendMessage = "$API_BOT$botToken/sendMessage"
-        val variantsOfAnswer = question?.variants?.mapIndexed { index, word ->
+        val variantsOfAnswer = question.variants.mapIndexed { index, word ->
             listOf(
                 InlineKeyBoard(
                     text = word.translate,
                     callbackData = CALLBACK_DATA_ANSWER_PREFIX + index
                 )
             )
-        }?.toMutableList()
+        }.toMutableList()
         val variantMenu = listOf(
             InlineKeyBoard(
                 text = "в меню",
                 callbackData = DATA_MENU
             )
         )
-        variantsOfAnswer?.add(variantMenu)
+        variantsOfAnswer.add(variantMenu)
         val requestBody = SendMessageRequest(
             chatId = chatId,
-            text = question?.correctAnswer?.original,
-            replyMarkup = variantsOfAnswer?.let {
-                ReplyMarkup(
-                    it
-                )
-            }
+            text = question.correctAnswer.original,
+            replyMarkup = ReplyMarkup(
+                variantsOfAnswer
+            )
         )
         val requestBodyString = json.encodeToString(requestBody)
         val request: HttpRequest = HttpRequest.newBuilder().uri(URI.create(urlSendMessage))
             .header("Content-type", "application/json")
             .POST(HttpRequest.BodyPublishers.ofString(requestBodyString))
             .build()
-        val response: HttpResponse<String> = client.send(request, HttpResponse.BodyHandlers.ofString())
 
-        return response.body()
+        val responseResult: Result<HttpResponse<String>> =
+            runCatching { client.send(request, HttpResponse.BodyHandlers.ofString()) }
+        return if (responseResult.isSuccess)
+            responseResult.getOrNull()?.body()?.let { json.decodeFromString(it) }
+        else
+            null
     }
 
 }
