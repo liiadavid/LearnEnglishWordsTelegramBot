@@ -1,3 +1,4 @@
+import kotlinx.serialization.Serializable
 import java.io.File
 
 data class Statistics(
@@ -6,6 +7,7 @@ data class Statistics(
     val percentageOfLearnedWords: Int,
 )
 
+@Serializable
 data class Word(
     val original: String,
     val translate: String,
@@ -18,6 +20,7 @@ data class Question(
 )
 
 class LearnWordsTrainer(
+    private val fileName: String = "words.txt",
     private val learnedAnswerCount: Int = 3,
     private val countOfQuestionWords: Int = 4
 ) {
@@ -29,6 +32,11 @@ class LearnWordsTrainer(
         val numberOfWordsInDictionary = dictionary.size
         val percentageOfLearnedWords = numberOfLearnedWords * 100 / numberOfWordsInDictionary
         return Statistics(numberOfLearnedWords, numberOfWordsInDictionary, percentageOfLearnedWords)
+    }
+
+    fun resetProgress() {
+        dictionary.forEach { it.correctAnswersCount = 0 }
+        saveDictionary()
     }
 
     fun getNextQuestion(): Question? {
@@ -55,7 +63,7 @@ class LearnWordsTrainer(
             val correctAnswerId = it.variants.indexOf(it.correctAnswer)
             if (correctAnswerId == userAnswer) {
                 it.correctAnswer.correctAnswersCount++
-                saveDictionary(dictionary)
+                saveDictionary()
                 true
             } else {
                 false
@@ -64,9 +72,11 @@ class LearnWordsTrainer(
     }
 
     private fun loadDictionary(): List<Word> {
-        try {
+        try {val wordsFile = File(fileName)
+            if (!wordsFile.exists()) {
+                File("words.txt").copyTo(wordsFile)
+            }
             val dictionary = mutableListOf<Word>()
-            val wordsFile = File("words.txt")
             wordsFile.forEachLine { line ->
                 val word = line.split("|")
                 dictionary.add(Word(word[0], word[1], word[2].toIntOrNull() ?: 0))
@@ -77,8 +87,8 @@ class LearnWordsTrainer(
         }
     }
 
-    private fun saveDictionary(dictionary: List<Word>) {
-        val wordsFile = File("words.txt")
+    private fun saveDictionary() {
+        val wordsFile = File(fileName)
         wordsFile.writeText("")
         dictionary.forEach { word ->
             wordsFile.appendText("${word.original}|${word.translate}|${word.correctAnswersCount}\n")
