@@ -65,7 +65,7 @@ class TelegramBotService(
             runCatching { client.send(request, HttpResponse.BodyHandlers.ofString()) }
 
         return if (responseResult.isSuccess)
-            responseResult.getOrNull()?.body()?.let { json.decodeFromString(it) }
+            responseResult.getOrNull()?.body()
         else
             null
     }
@@ -105,7 +105,7 @@ class TelegramBotService(
         val responseResult: Result<HttpResponse<String>> =
             runCatching { client.send(request, HttpResponse.BodyHandlers.ofString()) }
         return if (responseResult.isSuccess)
-            responseResult.getOrNull()?.body()?.let { json.decodeFromString(it) }
+            responseResult.getOrNull()?.body()
         else
             null
     }
@@ -143,7 +143,7 @@ class TelegramBotService(
         val responseResult: Result<HttpResponse<String>> =
             runCatching { client.send(request, HttpResponse.BodyHandlers.ofString()) }
         return if (responseResult.isSuccess)
-            responseResult.getOrNull()?.body()?.let { json.decodeFromString(it) }
+            responseResult.getOrNull()?.body()
         else
             null
     }
