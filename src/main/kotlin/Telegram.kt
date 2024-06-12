@@ -19,6 +19,8 @@ data class Response(
 
 @Serializable
 data class Message(
+    @SerialName("message_id")
+    val id: Long,
     @SerialName("text")
     val text: String,
     @SerialName("chat")
@@ -61,10 +63,11 @@ fun checkNextQuestionAndSend(
     bot: TelegramBotService,
     trainer: LearnWordsTrainer,
     chatId: Long,
+    messageId: Long,
 ) {
     val question: Question? = trainer.getNextQuestion()
     if (question == null) bot.sendMessage(chatId, "Вы выучили все слова в базе")
-    else bot.sendQuestion(chatId, question)
+    else bot.sendQuestion(chatId, messageId, question)
 }
 
 fun handleUpdate(
@@ -73,6 +76,7 @@ fun handleUpdate(
     trainers: HashMap<Long, LearnWordsTrainer>,
 ) {
     val chatId: Long = update.message?.chat?.id ?: update.callbackQuery?.message?.chat?.id ?: return
+    val messageId: Long = update.callbackQuery?.message?.id ?: 0
     val message: String? = update.message?.text
     val data: String? = update.callbackQuery?.data
     val trainer = trainers.getOrPut(chatId) { LearnWordsTrainer("$chatId.txt") }
@@ -81,29 +85,31 @@ fun handleUpdate(
         bot.sendMenu(chatId)
     if (data?.lowercase() == DATA_STATISTICS) {
         val statistics: Statistics = trainer.getStatistics()
-        bot.sendMessage(
-            chatId, "Выучено ${statistics.numberOfLearnedWords} из " +
+        bot.sendStatistics(
+            chatId, messageId, "Выучено ${statistics.numberOfLearnedWords} из " +
                     "${statistics.numberOfWordsInDictionary} слов | ${statistics.percentageOfLearnedWords}%"
         )
     }
     if (data?.lowercase() == DATA_RESET_STATISTICS) {
         trainer.resetProgress()
-        bot.sendMessage(chatId, "Прогресс обнулён")
+        bot.sendResetMessage(chatId, messageId, "Прогресс обнулён")
     }
     if (data?.lowercase() == DATA_LEARN_WORDS) {
         val question: Question? = trainer.getNextQuestion()
         if (question == null) bot.sendMessage(chatId, "Вы выучили все слова в базе")
-        else bot.sendQuestion(chatId, question)
+        else bot.sendQuestion(chatId, messageId, question)
     }
     if (data?.startsWith(CALLBACK_DATA_ANSWER_PREFIX) == true) {
         if (trainer.checkAnswer(data.substringAfter(CALLBACK_DATA_ANSWER_PREFIX).toInt()))
-            bot.sendMessage(chatId, "Правильно!")
-        else bot.sendMessage(
+            bot.editMessage(chatId, messageId, "Правильно!")
+        else bot.editMessage(
             chatId,
+            messageId,
             "Не правильно: ${trainer.question?.correctAnswer?.original} - " +
                     "${trainer.question?.correctAnswer?.translate}"
         )
-        checkNextQuestionAndSend(bot, trainer, chatId)
+        Thread.sleep(MILLIS)
+        checkNextQuestionAndSend(bot, trainer, chatId, messageId)
     }
     if (data?.lowercase() == DATA_MENU)
         bot.sendMenu(chatId)
