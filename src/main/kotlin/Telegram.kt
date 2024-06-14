@@ -22,7 +22,7 @@ data class Message(
     @SerialName("message_id")
     val id: Long,
     @SerialName("text")
-    val text: String,
+    val text: String? = null,
     @SerialName("chat")
     val chat: Chat,
 )
@@ -81,8 +81,11 @@ fun handleUpdate(
     val data: String? = update.callbackQuery?.data
     val trainer = trainers.getOrPut(chatId) { LearnWordsTrainer("$chatId.txt") }
 
-    if (message?.lowercase() == DATA_MENU)
+    if (message?.lowercase()?.startsWith(DATA_MENU) == true ||
+        data?.lowercase()?.startsWith(DATA_MENU) == true
+    ) {
         bot.sendMenu(chatId)
+    }
     if (data?.lowercase() == DATA_STATISTICS) {
         val statistics: Statistics = trainer.getStatistics()
         bot.sendStatistics(
@@ -111,8 +114,6 @@ fun handleUpdate(
         Thread.sleep(MILLIS)
         checkNextQuestionAndSend(bot, trainer, chatId, messageId)
     }
-    if (data?.lowercase() == DATA_MENU)
-        bot.sendMenu(chatId)
 }
 
 const val MILLIS: Long = 2000
