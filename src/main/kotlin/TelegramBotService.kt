@@ -11,6 +11,8 @@ import java.net.http.HttpResponse
 data class SendMessageRequest(
     @SerialName("chat_id")
     val chatId: Long,
+    @SerialName("message_id")
+    val messageId: Long = 0L,
     @SerialName("text")
     val text: String?,
     @SerialName("reply_markup")
@@ -49,6 +51,28 @@ class TelegramBotService(
             null
     }
 
+    fun editMessage(chatId: Long, messageId: Long, message: String?): String? {
+        val urlSendMessage = "$API_BOT$botToken/editMessageText"
+        val requestBody = SendMessageRequest(
+            chatId = chatId,
+            messageId = messageId,
+            text = message,
+        )
+        val requestBodyString = json.encodeToString(requestBody)
+        val request: HttpRequest = HttpRequest.newBuilder().uri(URI.create(urlSendMessage))
+            .header("Content-type", "application/json")
+            .POST(HttpRequest.BodyPublishers.ofString(requestBodyString))
+            .build()
+
+        val responseResult: Result<HttpResponse<String>> =
+            runCatching { client.send(request, HttpResponse.BodyHandlers.ofString()) }
+
+        return if (responseResult.isSuccess)
+            responseResult.getOrNull()?.body()
+        else
+            null
+    }
+
     fun sendMessage(chatId: Long, message: String?): String? {
         val urlSendMessage = "$API_BOT$botToken/sendMessage"
         val requestBody = SendMessageRequest(
@@ -81,16 +105,12 @@ class TelegramBotService(
                         InlineKeyBoard(
                             text = "Изучать слова",
                             callbackData = DATA_LEARN_WORDS
-                        ),
-                        InlineKeyBoard(
-                            text = "Статистика",
-                            callbackData = DATA_STATISTICS
                         )
                     ),
                     listOf(
                         InlineKeyBoard(
-                            text = "Сбросить прогресс",
-                            callbackData = DATA_RESET_STATISTICS
+                            text = "Статистика",
+                            callbackData = DATA_STATISTICS
                         )
                     )
                 )
@@ -110,8 +130,8 @@ class TelegramBotService(
             null
     }
 
-    fun sendQuestion(chatId: Long, question: Question): String? {
-        val urlSendMessage = "$API_BOT$botToken/sendMessage"
+    fun sendQuestion(chatId: Long, messageId: Long, question: Question): String? {
+        val urlSendMessage = "$API_BOT$botToken/editMessageText"
         val variantsOfAnswer = question.variants.mapIndexed { index, word ->
             listOf(
                 InlineKeyBoard(
@@ -129,6 +149,7 @@ class TelegramBotService(
         variantsOfAnswer.add(variantMenu)
         val requestBody = SendMessageRequest(
             chatId = chatId,
+            messageId = messageId,
             text = question.correctAnswer.original,
             replyMarkup = ReplyMarkup(
                 variantsOfAnswer
@@ -148,6 +169,79 @@ class TelegramBotService(
             null
     }
 
+    fun sendStatistics(chatId: Long, messageId: Long, message: String): String? {
+        val urlSendMessage = "$API_BOT$botToken/editMessageText"
+        val requestBody = SendMessageRequest(
+            chatId = chatId,
+            messageId = messageId,
+            text = message,
+            replyMarkup = ReplyMarkup(
+                listOf(
+                    listOf(
+                        InlineKeyBoard(
+                            text = "Сбросить прогресс",
+                            callbackData = DATA_RESET_STATISTICS
+                        )
+                    ),
+                    listOf(
+                        InlineKeyBoard(
+                            text = "Основное меню",
+                            callbackData = DATA_MENU
+                        )
+                    )
+                )
+            )
+        )
+        val requestBodyString = json.encodeToString(requestBody)
+        val request: HttpRequest = HttpRequest.newBuilder().uri(URI.create(urlSendMessage))
+            .header("Content-type", "application/json")
+            .POST(HttpRequest.BodyPublishers.ofString(requestBodyString))
+            .build()
+
+        val responseResult: Result<HttpResponse<String>> =
+            runCatching { client.send(request, HttpResponse.BodyHandlers.ofString()) }
+        return if (responseResult.isSuccess)
+            responseResult.getOrNull()?.body()
+        else
+            null
+    }
+
+    fun sendResetMessage(chatId: Long, messageId: Long, message: String): String? {
+        val urlSendMessage = "$API_BOT$botToken/editMessageText"
+        val requestBody = SendMessageRequest(
+            chatId = chatId,
+            messageId = messageId,
+            text = message,
+            replyMarkup = ReplyMarkup(
+                listOf(
+                    listOf(
+                        InlineKeyBoard(
+                            text = "Изучать слова",
+                            callbackData = DATA_LEARN_WORDS
+                        )
+                    ),
+                    listOf(
+                        InlineKeyBoard(
+                            text = "Основное меню",
+                            callbackData = DATA_MENU
+                        )
+                    )
+                )
+            )
+        )
+        val requestBodyString = json.encodeToString(requestBody)
+        val request: HttpRequest = HttpRequest.newBuilder().uri(URI.create(urlSendMessage))
+            .header("Content-type", "application/json")
+            .POST(HttpRequest.BodyPublishers.ofString(requestBodyString))
+            .build()
+
+        val responseResult: Result<HttpResponse<String>> =
+            runCatching { client.send(request, HttpResponse.BodyHandlers.ofString()) }
+        return if (responseResult.isSuccess)
+            responseResult.getOrNull()?.body()
+        else
+            null
+    }
 }
 
 const val CALLBACK_DATA_ANSWER_PREFIX = "answer_"

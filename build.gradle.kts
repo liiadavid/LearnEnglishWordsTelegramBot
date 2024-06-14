@@ -15,6 +15,7 @@ repositories {
 dependencies {
     testImplementation("org.jetbrains.kotlin:kotlin-test")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
+    implementation("org.xerial:sqlite-jdbc:3.43.0.0")
 }
 
 tasks.test {
