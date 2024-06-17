@@ -2,6 +2,8 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import java.io.File
+import java.io.InputStream
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -31,6 +33,12 @@ data class InlineKeyBoard(
     val callbackData: String,
     @SerialName("text")
     val text: String,
+)
+
+@Serializable
+data class GetFileRequest(
+    @SerialName("file_id")
+    val fileId: String?,
 )
 
 class TelegramBotService(
@@ -241,6 +249,45 @@ class TelegramBotService(
             responseResult.getOrNull()?.body()
         else
             null
+    }
+
+    fun getFile(fileId: String, json: Json): String {
+        val urlGetFile = "$API_BOT/getFile"
+        println(urlGetFile)
+        val requestBody = GetFileRequest(fileId = fileId)
+        val requestBodyString = json.encodeToString(requestBody)
+        val request: HttpRequest = HttpRequest.newBuilder()
+            .uri(URI.create(urlGetFile))
+            .header("Content-type", "application/json")
+            .POST(HttpRequest.BodyPublishers.ofString(requestBodyString))
+            .build()
+        val response: HttpResponse<String> = client.send(
+            request,
+            HttpResponse.BodyHandlers.ofString()
+        )
+        return response.body()
+//        val responseResult: Result<HttpResponse<String>> =
+//            runCatching { client.send(request, HttpResponse.BodyHandlers.ofString()) }
+//        return if (responseResult.isSuccess)
+//            responseResult.getOrNull()?.let { json.decodeFromString(it.body()) }
+//        else
+//            null
+    }
+
+    fun downloadFile(filePath: String, fileName: String) {
+        val urlGetFile = "$API_BOT/$filePath"
+        println(urlGetFile)
+        val request = HttpRequest
+            .newBuilder()
+            .uri(URI.create(urlGetFile))
+            .GET()
+            .build()
+        val response: HttpResponse<InputStream> = HttpClient
+            .newHttpClient()
+            .send(request, HttpResponse.BodyHandlers.ofInputStream())
+        println("status code: " + response.statusCode())
+        val body: InputStream = response.body()
+        body.copyTo(File(fileName).outputStream(), 16 * 1024)
     }
 }
 
