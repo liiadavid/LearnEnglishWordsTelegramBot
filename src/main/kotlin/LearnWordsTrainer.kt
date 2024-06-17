@@ -12,6 +12,7 @@ data class Word(
     val original: String,
     val translate: String,
     var correctAnswersCount: Int = 0,
+    val photo: String,
 )
 
 data class Question(
@@ -72,14 +73,22 @@ class LearnWordsTrainer(
     }
 
     private fun loadDictionary(): List<Word> {
-        try {val wordsFile = File(fileName)
+        try {
+            val wordsFile = File(fileName)
             if (!wordsFile.exists()) {
                 File("words.txt").copyTo(wordsFile)
             }
             val dictionary = mutableListOf<Word>()
             wordsFile.forEachLine { line ->
                 val word = line.split("|")
-                dictionary.add(Word(word[0], word[1], word[2].toIntOrNull() ?: 0))
+                dictionary.add(
+                    Word(
+                        original = word[0],
+                        translate = word[1],
+                        correctAnswersCount = word[2].toIntOrNull() ?: 0,
+                        photo = "wordspictures/${word[0]}.jpg"
+                    )
+                )
             }
             return dictionary
         } catch (e: IndexOutOfBoundsException) {
@@ -91,7 +100,7 @@ class LearnWordsTrainer(
         val wordsFile = File(fileName)
         wordsFile.writeText("")
         dictionary.forEach { word ->
-            wordsFile.appendText("${word.original}|${word.translate}|${word.correctAnswersCount}\n")
+            wordsFile.appendText("${word.original}|${word.translate}|${word.correctAnswersCount}|${word.photo}\n")
         }
     }
 }

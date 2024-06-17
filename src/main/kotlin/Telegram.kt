@@ -1,5 +1,6 @@
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import java.io.File
 
 @Serializable
 data class Update(
@@ -25,6 +26,8 @@ data class Message(
     val text: String? = null,
     @SerialName("chat")
     val chat: Chat,
+    @SerialName("photo")
+    val photo: String? = null,
 )
 
 @Serializable
@@ -104,10 +107,14 @@ fun handleUpdate(
     }
     if (data?.startsWith(CALLBACK_DATA_ANSWER_PREFIX) == true) {
         if (trainer.checkAnswer(data.substringAfter(CALLBACK_DATA_ANSWER_PREFIX).toInt()))
-            bot.editMessage(chatId, messageId, "Правильно!")
-        else bot.editMessage(
+            bot.sendPhoto(
+                File(trainer.question?.correctAnswer?.photo!!),
+                chatId,
+                "Правильно! ${trainer.question?.correctAnswer?.original} - ${trainer.question?.correctAnswer?.translate}"
+            )
+        else bot.sendPhoto(
+            File(trainer.question?.correctAnswer?.photo!!),
             chatId,
-            messageId,
             "Не правильно: ${trainer.question?.correctAnswer?.original} - " +
                     "${trainer.question?.correctAnswer?.translate}"
         )

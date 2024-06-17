@@ -5,16 +5,11 @@ rabbit|кролик|0
 hamster|хомяк|0
 mouse|мышь|0
 rat|крыска|0
-guinea pig|морская свинка|0
-chinchilla|шиншилла|0
-ferret|хорёк|0
 parrot|попугай|0
 budgie|волнистый попугай|0
-canary|канарейка|0
 goldfish|золотая рыбка|0
 tortoise|черепашка|0
 lizard|ящерица|0
 chameleon|хамелеон|0
-snake|змея|0
 spider|паук|0
 snail|улитка|0
