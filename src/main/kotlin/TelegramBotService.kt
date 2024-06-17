@@ -253,6 +253,44 @@ class TelegramBotService(
             null
     }
 
+    fun sendQuestionWithPhoto(chatId: Long, hasSpoiler: Boolean = false, question: Question): String? {
+        val urlSendMessage = "$API_BOT$botToken/sendPhoto"
+        val variantsOfAnswer = question.variants.mapIndexed { index, word ->
+            listOf(
+                InlineKeyBoard(
+                    text = word.translate,
+                    callbackData = CALLBACK_DATA_ANSWER_PREFIX + index
+                )
+            )
+        }.toMutableList()
+        val variantMenu = listOf(
+            InlineKeyBoard(
+                text = "в меню",
+                callbackData = DATA_MENU
+            )
+        )
+        variantsOfAnswer.add(variantMenu)
+        val data: MutableMap<String, Any> = LinkedHashMap()
+        data["chat_id"] = chatId.toString()
+        data["photo"] = File(question.correctAnswer.photo)
+        data["caption"] = question.correctAnswer.original
+        data["has_spoiler"] = hasSpoiler
+        data["reply_markup"] = json.encodeToString(ReplyMarkup(variantsOfAnswer))
+        val boundary: String = BigInteger(35, Random()).toString()
+
+        val request = HttpRequest.newBuilder()
+            .uri(URI.create(urlSendMessage))
+            .postMultipartFormData(boundary, data)
+            .build()
+        val client: HttpClient = HttpClient.newBuilder().build()
+        val responseResult: Result<HttpResponse<String>> =
+            runCatching { client.send(request, HttpResponse.BodyHandlers.ofString()) }
+        return if (responseResult.isSuccess)
+            responseResult.getOrNull()?.body()
+        else
+            null
+    }
+
     fun sendPhoto(file: File, chatId: Long, caption: String = "", hasSpoiler: Boolean = false): String? {
         val data: MutableMap<String, Any> = LinkedHashMap()
         data["chat_id"] = chatId.toString()
@@ -262,7 +300,7 @@ class TelegramBotService(
         val boundary: String = BigInteger(35, Random()).toString()
 
         val request = HttpRequest.newBuilder()
-            .uri(URI.create("$API_BOT$botToken/sendPhoto"))
+            .uri(URI.create("$API_BOT$botToken/editMessageMedia"))
             .postMultipartFormData(boundary, data)
             .build()
         val client: HttpClient = HttpClient.newBuilder().build()

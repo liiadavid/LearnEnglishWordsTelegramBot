@@ -27,7 +27,13 @@ data class Message(
     @SerialName("chat")
     val chat: Chat,
     @SerialName("photo")
-    val photo: String? = null,
+    val photo: Array<Photo>? = null,
+)
+
+@Serializable
+data class Photo(
+    @SerialName("file_id")
+    val fileId: String = "",
 )
 
 @Serializable
@@ -70,7 +76,8 @@ fun checkNextQuestionAndSend(
 ) {
     val question: Question? = trainer.getNextQuestion()
     if (question == null) bot.sendMessage(chatId, "Вы выучили все слова в базе")
-    else bot.sendQuestion(chatId, messageId, question)
+    else bot.sendQuestionWithPhoto(chatId, true, question)
+    //bot.sendQuestion(chatId, messageId, question)
 }
 
 fun handleUpdate(
@@ -103,17 +110,18 @@ fun handleUpdate(
     if (data?.lowercase() == DATA_LEARN_WORDS) {
         val question: Question? = trainer.getNextQuestion()
         if (question == null) bot.sendMessage(chatId, "Вы выучили все слова в базе")
-        else bot.sendQuestion(chatId, messageId, question)
+        else bot.sendQuestionWithPhoto(chatId, true, question)
+        //bot.sendQuestion(chatId, messageId, question)
     }
     if (data?.startsWith(CALLBACK_DATA_ANSWER_PREFIX) == true) {
         if (trainer.checkAnswer(data.substringAfter(CALLBACK_DATA_ANSWER_PREFIX).toInt()))
             bot.sendPhoto(
-                File(trainer.question?.correctAnswer?.photo!!),
+                File(trainer.question?.correctAnswer?.photo),
                 chatId,
                 "Правильно! ${trainer.question?.correctAnswer?.original} - ${trainer.question?.correctAnswer?.translate}"
             )
         else bot.sendPhoto(
-            File(trainer.question?.correctAnswer?.photo!!),
+            File(trainer.question?.correctAnswer?.photo),
             chatId,
             "Не правильно: ${trainer.question?.correctAnswer?.original} - " +
                     "${trainer.question?.correctAnswer?.translate}"
