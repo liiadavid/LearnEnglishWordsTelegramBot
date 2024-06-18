@@ -251,8 +251,8 @@ class TelegramBotService(
             null
     }
 
-    fun getFile(fileId: String, json: Json): String {
-        val urlGetFile = "$API_BOT/getFile"
+    fun getFile(fileId: String): GetFileResponse? {
+        val urlGetFile = "$API_BOT$botToken/getFile"
         println(urlGetFile)
         val requestBody = GetFileRequest(fileId = fileId)
         val requestBodyString = json.encodeToString(requestBody)
@@ -261,21 +261,17 @@ class TelegramBotService(
             .header("Content-type", "application/json")
             .POST(HttpRequest.BodyPublishers.ofString(requestBodyString))
             .build()
-        val response: HttpResponse<String> = client.send(
-            request,
-            HttpResponse.BodyHandlers.ofString()
-        )
-        return response.body()
-//        val responseResult: Result<HttpResponse<String>> =
-//            runCatching { client.send(request, HttpResponse.BodyHandlers.ofString()) }
-//        return if (responseResult.isSuccess)
-//            responseResult.getOrNull()?.let { json.decodeFromString(it.body()) }
-//        else
-//            null
+
+        val responseResult: Result<HttpResponse<String>> =
+            runCatching { client.send(request, HttpResponse.BodyHandlers.ofString()) }
+        return if (responseResult.isSuccess)
+            responseResult.getOrNull()?.let { json.decodeFromString(it.body()) }
+        else
+            null
     }
 
     fun downloadFile(filePath: String, fileName: String) {
-        val urlGetFile = "$API_BOT/$filePath"
+        val urlGetFile = "$API_BOT$botToken/$filePath"
         println(urlGetFile)
         val request = HttpRequest
             .newBuilder()

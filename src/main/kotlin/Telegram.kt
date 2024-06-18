@@ -1,7 +1,5 @@
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
-import java.io.File
 
 @Serializable
 data class Update(
@@ -113,7 +111,6 @@ fun handleUpdate(
     update: Update,
     trainers: HashMap<Long, LearnWordsTrainer>,
 ) {
-    val json: Json = Json { ignoreUnknownKeys = true }
     val chatId: Long = update.message?.chat?.id ?: update.callbackQuery?.message?.chat?.id ?: return
     val trainer = trainers.getOrPut(chatId) { LearnWordsTrainer("$chatId.txt") }
     val messageId: Long = update.callbackQuery?.message?.id ?: 0
@@ -121,10 +118,8 @@ fun handleUpdate(
     val data: String? = update.callbackQuery?.data
     val document = update.message?.document
     if (document != null) {
-        val jsonResponse = bot.getFile(document.fileId, json)
-        val response: GetFileResponse = json.decodeFromString(jsonResponse)
-//        val response: GetFileResponse? = bot.getFile(document.fileId)
-        response.result?.let {
+        val response: GetFileResponse? = bot.getFile(document.fileId)
+        response?.result?.let {
 //            if (File(document.fileName).exists()) {
 //                bot.sendMessage(chatId, "Файл уже существует")
 //            } else {
