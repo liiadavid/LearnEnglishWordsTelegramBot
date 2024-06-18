@@ -13,6 +13,7 @@ data class Word(
     val translate: String,
     var correctAnswersCount: Int = 0,
     val photo: String,
+    val photoId: String?,
 )
 
 data class Question(
@@ -26,7 +27,8 @@ class LearnWordsTrainer(
     private val countOfQuestionWords: Int = 4
 ) {
     var question: Question? = null
-    private val dictionary = loadDictionary()
+    val photoId: String? = null
+    private val dictionary = loadDictionary(photoId)
 
     fun getStatistics(): Statistics {
         val numberOfLearnedWords = dictionary.filter { it.correctAnswersCount >= learnedAnswerCount }.size
@@ -72,7 +74,7 @@ class LearnWordsTrainer(
         } ?: false
     }
 
-    private fun loadDictionary(): List<Word> {
+    fun loadDictionary(photoId: String?): List<Word> {
         try {
             val wordsFile = File(fileName)
             if (!wordsFile.exists()) {
@@ -86,7 +88,8 @@ class LearnWordsTrainer(
                         original = word[0],
                         translate = word[1],
                         correctAnswersCount = word[2].toIntOrNull() ?: 0,
-                        photo = "wordspictures/${word[0]}.jpg"
+                        photo = "wordspictures/${word[0]}.jpg",
+                        photoId = photoId
                     )
                 )
             }
@@ -96,11 +99,11 @@ class LearnWordsTrainer(
         }
     }
 
-    private fun saveDictionary() {
+    fun saveDictionary() {
         val wordsFile = File(fileName)
         wordsFile.writeText("")
         dictionary.forEach { word ->
-            wordsFile.appendText("${word.original}|${word.translate}|${word.correctAnswersCount}|${word.photo}\n")
+            wordsFile.appendText("${word.original}|${word.translate}|${word.correctAnswersCount}|${word.photo}|${word.photoId ?: null}\n")
         }
     }
 }

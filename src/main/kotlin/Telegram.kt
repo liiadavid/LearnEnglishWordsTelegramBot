@@ -1,6 +1,5 @@
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import java.io.File
 
 @Serializable
 data class Update(
@@ -76,8 +75,11 @@ fun checkNextQuestionAndSend(
 ) {
     val question: Question? = trainer.getNextQuestion()
     if (question == null) bot.sendMessage(chatId, "Вы выучили все слова в базе")
-    else bot.sendQuestionWithPhoto(chatId, true, question)
-    //bot.sendQuestion(chatId, messageId, question)
+    else {
+        bot.deleteMessage(chatId, messageId)
+        Thread.sleep(500)
+        bot.sendQuestionWithPhoto(chatId, true, question)
+    }
 }
 
 fun handleUpdate(
@@ -89,6 +91,7 @@ fun handleUpdate(
     val messageId: Long = update.callbackQuery?.message?.id ?: 0
     val message: String? = update.message?.text
     val data: String? = update.callbackQuery?.data
+    val photoId = update.callbackQuery?.message?.photo?.get(1)?.fileId
     val trainer = trainers.getOrPut(chatId) { LearnWordsTrainer("$chatId.txt") }
 
     if (message?.lowercase()?.startsWith(DATA_MENU) == true ||
@@ -110,22 +113,33 @@ fun handleUpdate(
     if (data?.lowercase() == DATA_LEARN_WORDS) {
         val question: Question? = trainer.getNextQuestion()
         if (question == null) bot.sendMessage(chatId, "Вы выучили все слова в базе")
-        else bot.sendQuestionWithPhoto(chatId, true, question)
-        //bot.sendQuestion(chatId, messageId, question)
+        else {
+            bot.deleteMessage(chatId, messageId)
+            Thread.sleep(500)
+            bot.sendQuestionWithPhoto(chatId, true, question)
+        }
     }
     if (data?.startsWith(CALLBACK_DATA_ANSWER_PREFIX) == true) {
-        if (trainer.checkAnswer(data.substringAfter(CALLBACK_DATA_ANSWER_PREFIX).toInt()))
+        if (trainer.checkAnswer(data.substringAfter(CALLBACK_DATA_ANSWER_PREFIX).toInt())) {
+            bot.deleteMessage(chatId, messageId)
+            Thread.sleep(500)
             bot.sendPhoto(
-                File(trainer.question?.correctAnswer?.photo),
+                trainer.question?.correctAnswer?.photo,
+                //File(trainer.question?.correctAnswer?.photo),
                 chatId,
                 "Правильно! ${trainer.question?.correctAnswer?.original} - ${trainer.question?.correctAnswer?.translate}"
             )
-        else bot.sendPhoto(
-            File(trainer.question?.correctAnswer?.photo),
-            chatId,
-            "Не правильно: ${trainer.question?.correctAnswer?.original} - " +
-                    "${trainer.question?.correctAnswer?.translate}"
-        )
+        } else {
+            bot.deleteMessage(chatId, messageId)
+            Thread.sleep(500)
+            bot.sendPhoto(
+                trainer.question?.correctAnswer?.photo,
+                //File(trainer.question?.correctAnswer?.photo),
+                chatId,
+                "Не правильно: ${trainer.question?.correctAnswer?.original} - " +
+                        "${trainer.question?.correctAnswer?.translate}"
+            )
+        }
         Thread.sleep(MILLIS)
         checkNextQuestionAndSend(bot, trainer, chatId, messageId)
     }

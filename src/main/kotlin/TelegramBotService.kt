@@ -24,7 +24,7 @@ data class SendMessageRequest(
     @SerialName("photo")
     val photo: String? = "",
     @SerialName("text")
-    val text: String?,
+    val text: String? = null,
     @SerialName("reply_markup")
     val replyMarkup: ReplyMarkup? = null,
 )
@@ -272,7 +272,7 @@ class TelegramBotService(
         variantsOfAnswer.add(variantMenu)
         val data: MutableMap<String, Any> = LinkedHashMap()
         data["chat_id"] = chatId.toString()
-        data["photo"] = File(question.correctAnswer.photo)
+        data["photo"] = question.correctAnswer.photoId ?: File(question.correctAnswer.photo)
         data["caption"] = question.correctAnswer.original
         data["has_spoiler"] = hasSpoiler
         data["reply_markup"] = json.encodeToString(ReplyMarkup(variantsOfAnswer))
@@ -291,16 +291,16 @@ class TelegramBotService(
             null
     }
 
-    fun sendPhoto(file: File, chatId: Long, caption: String = "", hasSpoiler: Boolean = false): String? {
+    fun sendPhoto(file: String?, chatId: Long, caption: String = "", hasSpoiler: Boolean = false): String? {
         val data: MutableMap<String, Any> = LinkedHashMap()
         data["chat_id"] = chatId.toString()
-        data["photo"] = file
+        data["photo"] = File(file)
         data["caption"] = caption
         data["has_spoiler"] = hasSpoiler
         val boundary: String = BigInteger(35, Random()).toString()
 
         val request = HttpRequest.newBuilder()
-            .uri(URI.create("$API_BOT$botToken/editMessageMedia"))
+            .uri(URI.create("$API_BOT$botToken/sendPhoto"))
             .postMultipartFormData(boundary, data)
             .build()
         val client: HttpClient = HttpClient.newBuilder().build()
@@ -341,6 +341,26 @@ class TelegramBotService(
         return this
     }
 
+    fun deleteMessage(chatId: Long, messageId: Long): String? {
+        val urlSendMessage = "$API_BOT$botToken/deleteMessage"
+        val requestBody = SendMessageRequest(
+            chatId = chatId,
+            messageId = messageId,
+        )
+        val requestBodyString = json.encodeToString(requestBody)
+        val request: HttpRequest = HttpRequest.newBuilder().uri(URI.create(urlSendMessage))
+            .header("Content-type", "application/json")
+            .POST(HttpRequest.BodyPublishers.ofString(requestBodyString))
+            .build()
+
+        val responseResult: Result<HttpResponse<String>> =
+            runCatching { client.send(request, HttpResponse.BodyHandlers.ofString()) }
+
+        return if (responseResult.isSuccess)
+            responseResult.getOrNull()?.body()
+        else
+            null
+    }
 }
 
 const val CALLBACK_DATA_ANSWER_PREFIX = "answer_"
