@@ -13,7 +13,7 @@ data class Word(
     val translate: String,
     var correctAnswersCount: Int = 0,
     val photo: String,
-    val photoId: String?,
+    var photoId: String?,
 )
 
 data class Question(
@@ -24,10 +24,11 @@ data class Question(
 class LearnWordsTrainer(
     private val fileName: String = "words.txt",
     private val learnedAnswerCount: Int = 3,
-    private val countOfQuestionWords: Int = 4
+    private val countOfQuestionWords: Int = 4,
+    var lastMessageId: Long? = null,
 ) {
     var question: Question? = null
-    val photoId: String? = null
+    private val photoId: String? = null
     private val dictionary = loadDictionary(photoId)
 
     fun getStatistics(): Statistics {

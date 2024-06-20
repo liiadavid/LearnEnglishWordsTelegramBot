@@ -76,9 +76,9 @@ fun checkNextQuestionAndSend(
     val question: Question? = trainer.getNextQuestion()
     if (question == null) bot.sendMessage(chatId, "Вы выучили все слова в базе")
     else {
-        bot.deleteMessage(chatId, messageId)
-        Thread.sleep(500)
-        bot.sendQuestionWithPhoto(chatId, true, question)
+        bot.deleteMessage(chatId, trainer.lastMessageId ?: messageId)
+        val messageWithQuestion = bot.sendQuestionWithPhoto(chatId, true, question)
+        trainer.lastMessageId = messageWithQuestion?.id
     }
 }
 
@@ -91,7 +91,6 @@ fun handleUpdate(
     val messageId: Long = update.callbackQuery?.message?.id ?: 0
     val message: String? = update.message?.text
     val data: String? = update.callbackQuery?.data
-    val photoId = update.callbackQuery?.message?.photo?.get(1)?.fileId
     val trainer = trainers.getOrPut(chatId) { LearnWordsTrainer("$chatId.txt") }
 
     if (message?.lowercase()?.startsWith(DATA_MENU) == true ||
@@ -114,34 +113,34 @@ fun handleUpdate(
         val question: Question? = trainer.getNextQuestion()
         if (question == null) bot.sendMessage(chatId, "Вы выучили все слова в базе")
         else {
-            bot.deleteMessage(chatId, messageId)
-            Thread.sleep(500)
-            bot.sendQuestionWithPhoto(chatId, true, question)
+            bot.deleteMessage(chatId, trainer.lastMessageId ?: messageId)
+            val messageWithQuestion = bot.sendQuestionWithPhoto(chatId, true, question)
+            trainer.lastMessageId = messageWithQuestion?.id
         }
     }
     if (data?.startsWith(CALLBACK_DATA_ANSWER_PREFIX) == true) {
+        val idOfMessage = trainer.lastMessageId ?: messageId
         if (trainer.checkAnswer(data.substringAfter(CALLBACK_DATA_ANSWER_PREFIX).toInt())) {
-            bot.deleteMessage(chatId, messageId)
-            Thread.sleep(500)
-            bot.sendPhoto(
-                trainer.question?.correctAnswer?.photo,
-                //File(trainer.question?.correctAnswer?.photo),
+            bot.deleteMessage(chatId, idOfMessage)
+            val messageWithPhoto = bot.sendPhoto(
+                trainer.question?.correctAnswer?.photoId, trainer.question?.correctAnswer?.photo,
                 chatId,
-                "Правильно! ${trainer.question?.correctAnswer?.original} - ${trainer.question?.correctAnswer?.translate}"
+                "Правильно! ${trainer.question?.correctAnswer?.original} - " +
+                        "${trainer.question?.correctAnswer?.translate}"
             )
+            trainer.lastMessageId = messageWithPhoto?.id
         } else {
-            bot.deleteMessage(chatId, messageId)
-            Thread.sleep(500)
-            bot.sendPhoto(
-                trainer.question?.correctAnswer?.photo,
-                //File(trainer.question?.correctAnswer?.photo),
+            bot.deleteMessage(chatId, idOfMessage)
+            val messageWithPhoto = bot.sendPhoto(
+                trainer.question?.correctAnswer?.photoId, trainer.question?.correctAnswer?.photo,
                 chatId,
                 "Не правильно: ${trainer.question?.correctAnswer?.original} - " +
                         "${trainer.question?.correctAnswer?.translate}"
             )
+            trainer.lastMessageId = messageWithPhoto?.id
         }
         Thread.sleep(MILLIS)
-        checkNextQuestionAndSend(bot, trainer, chatId, messageId)
+        checkNextQuestionAndSend(bot, trainer, chatId, trainer.lastMessageId ?: messageId)
     }
 }
 

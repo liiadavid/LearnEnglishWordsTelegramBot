@@ -43,6 +43,12 @@ data class InlineKeyBoard(
     val text: String,
 )
 
+@Serializable
+data class ResponseItem<T>(
+    @SerialName("result")
+    val result: T
+)
+
 class TelegramBotService(
     private val botToken: String,
 ) {
@@ -253,7 +259,7 @@ class TelegramBotService(
             null
     }
 
-    fun sendQuestionWithPhoto(chatId: Long, hasSpoiler: Boolean = false, question: Question): String? {
+    fun sendQuestionWithPhoto(chatId: Long, hasSpoiler: Boolean = false, question: Question): Message? {
         val urlSendMessage = "$API_BOT$botToken/sendPhoto"
         val variantsOfAnswer = question.variants.mapIndexed { index, word ->
             listOf(
@@ -285,16 +291,26 @@ class TelegramBotService(
         val client: HttpClient = HttpClient.newBuilder().build()
         val responseResult: Result<HttpResponse<String>> =
             runCatching { client.send(request, HttpResponse.BodyHandlers.ofString()) }
-        return if (responseResult.isSuccess)
-            responseResult.getOrNull()?.body()
-        else
+        return if (responseResult.isSuccess) {
+            responseResult.getOrNull()
+                ?.body()
+                ?.let {
+                    val result = runCatching { json.decodeFromString<ResponseItem<Message>>(it) }
+                    result.exceptionOrNull()?.let {
+                        println(it.printStackTrace())
+                    }
+                    question.correctAnswer.photoId = result.getOrNull()?.result?.photo?.get(1)?.fileId.toString()
+                    result.getOrNull()?.result
+                }
+        } else {
             null
+        }
     }
 
-    fun sendPhoto(file: String?, chatId: Long, caption: String = "", hasSpoiler: Boolean = false): String? {
+    fun sendPhoto(fileId: String?, file: String?, chatId: Long, caption: String, hasSpoiler: Boolean = false): Message? {
         val data: MutableMap<String, Any> = LinkedHashMap()
         data["chat_id"] = chatId.toString()
-        data["photo"] = File(file)
+        data["photo"] = fileId ?: File(file)
         data["caption"] = caption
         data["has_spoiler"] = hasSpoiler
         val boundary: String = BigInteger(35, Random()).toString()
@@ -304,8 +320,21 @@ class TelegramBotService(
             .postMultipartFormData(boundary, data)
             .build()
         val client: HttpClient = HttpClient.newBuilder().build()
-        val response = client.send(request, HttpResponse.BodyHandlers.ofString())
-        return response.body()
+        val responseResult: Result<HttpResponse<String>> =
+            runCatching { client.send(request, HttpResponse.BodyHandlers.ofString()) }
+        return if (responseResult.isSuccess) {
+            responseResult.getOrNull()
+                ?.body()
+                ?.let {
+                    val result = runCatching { json.decodeFromString<ResponseItem<Message>>(it) }
+                    result.exceptionOrNull()?.let {
+                        println(it.printStackTrace())
+                    }
+                    result.getOrNull()?.result
+                }
+        } else {
+            null
+        }
     }
 
     private fun HttpRequest.Builder.postMultipartFormData(
