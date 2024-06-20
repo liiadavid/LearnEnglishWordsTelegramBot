@@ -271,7 +271,7 @@ class TelegramBotService(
     }
 
     fun downloadFile(filePath: String, fileName: String) {
-        val urlGetFile = "$API_BOT$botToken/$filePath"
+        val urlGetFile = "$BOT_FILE_URL$botToken/$filePath"
         println(urlGetFile)
         val request = HttpRequest
             .newBuilder()
@@ -289,3 +289,4 @@ class TelegramBotService(
 
 const val CALLBACK_DATA_ANSWER_PREFIX = "answer_"
 const val API_BOT = "https://api.telegram.org/bot"
+const val BOT_FILE_URL = "https://api.telegram.org/file/bot"

@@ -25,7 +25,7 @@ class LearnWordsTrainer(
     private val countOfQuestionWords: Int = 4
 ) {
     var question: Question? = null
-    private val dictionary = loadDictionary()
+    private var dictionary = loadDictionary()
 
     fun getStatistics(): Statistics {
         val numberOfLearnedWords = dictionary.filter { it.correctAnswersCount >= learnedAnswerCount }.size
@@ -72,7 +72,8 @@ class LearnWordsTrainer(
     }
 
     private fun loadDictionary(): List<Word> {
-        try {val wordsFile = File(fileName)
+        try {
+            val wordsFile = File(fileName)
             if (!wordsFile.exists()) {
                 File("words.txt").copyTo(wordsFile)
             }
@@ -93,5 +94,18 @@ class LearnWordsTrainer(
         dictionary.forEach { word ->
             wordsFile.appendText("${word.original}|${word.translate}|${word.correctAnswersCount}\n")
         }
+    }
+
+    fun editDictionary(newWordsFileName: String) {
+        val newWordsFile = File(newWordsFileName)
+        newWordsFile.forEachLine { line ->
+            val word = line.split("|")
+            val wordClass = Word(word[0], word[1], word[2].toIntOrNull() ?: 0)
+            if (!dictionary.contains(wordClass)) {
+                dictionary += (wordClass)
+            }
+        }
+        newWordsFile.delete()
+        saveDictionary()
     }
 }

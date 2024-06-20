@@ -1,5 +1,6 @@
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import java.io.File
 
 @Serializable
 data class Update(
@@ -32,7 +33,7 @@ data class Message(
 @Serializable
 data class Document(
     @SerialName("file_name")
-    val fileName: String,
+    var fileName: String,
     @SerialName("mime_type")
     val mimeType: String,
     @SerialName("file_id")
@@ -120,12 +121,18 @@ fun handleUpdate(
     if (document != null) {
         val response: GetFileResponse? = bot.getFile(document.fileId)
         response?.result?.let {
-//            if (File(document.fileName).exists()) {
-//                bot.sendMessage(chatId, "Файл уже существует")
-//            } else {
-            bot.downloadFile(it.filePath, it.fileUniqueId)
-//                bot.sendMessage(chatId, "Файл загружен")
-//            }
+            val pathName = "$chatId${document.fileName}"
+            if (File(pathName).exists()) {
+                bot.sendMessage(chatId, "Файл уже существует")
+                Thread.sleep(MILLIS)
+                bot.sendMenu(chatId)
+            } else {
+                bot.downloadFile(it.filePath, pathName)
+                trainer.editDictionary(pathName)
+                bot.sendMessage(chatId, "Файл загружен и словарь обновлён")
+                Thread.sleep(MILLIS)
+                bot.sendMenu(chatId)
+            }
         }
     }
 
