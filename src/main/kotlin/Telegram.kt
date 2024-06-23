@@ -26,6 +26,8 @@ data class Message(
     val text: String? = null,
     @SerialName("chat")
     val chat: Chat,
+    @SerialName("photo")
+    val photo: Array<Photo>? = null,
     @SerialName("document")
     val document: Document? = null,
 )
@@ -62,6 +64,12 @@ data class TelegramFile(
     val fileSize: Long,
     @SerialName("file_path")
     val filePath: String,
+)  
+
+@Serializable
+data class Photo(
+    @SerialName("file_id")
+    val fileId: String = "",
 )
 
 @Serializable
@@ -104,7 +112,11 @@ fun checkNextQuestionAndSend(
 ) {
     val question: Question? = trainer.getNextQuestion()
     if (question == null) bot.sendMessage(chatId, "Вы выучили все слова в базе")
-    else bot.sendQuestion(chatId, messageId, question)
+    else {
+        bot.deleteMessage(chatId, trainer.lastMessageId ?: messageId)
+        val messageWithQuestion = bot.sendQuestionWithPhoto(chatId, true, question)
+        trainer.lastMessageId = messageWithQuestion?.id
+    }
 }
 
 fun handleUpdate(
@@ -155,19 +167,35 @@ fun handleUpdate(
     if (data?.lowercase() == DATA_LEARN_WORDS) {
         val question: Question? = trainer.getNextQuestion()
         if (question == null) bot.sendMessage(chatId, "Вы выучили все слова в базе")
-        else bot.sendQuestion(chatId, messageId, question)
+        else {
+            bot.deleteMessage(chatId, trainer.lastMessageId ?: messageId)
+            val messageWithQuestion = bot.sendQuestionWithPhoto(chatId, true, question)
+            trainer.lastMessageId = messageWithQuestion?.id
+        }
     }
     if (data?.startsWith(CALLBACK_DATA_ANSWER_PREFIX) == true) {
-        if (trainer.checkAnswer(data.substringAfter(CALLBACK_DATA_ANSWER_PREFIX).toInt()))
-            bot.editMessage(chatId, messageId, "Правильно!")
-        else bot.editMessage(
-            chatId,
-            messageId,
-            "Не правильно: ${trainer.question?.correctAnswer?.original} - " +
-                    "${trainer.question?.correctAnswer?.translate}"
-        )
+        val idOfMessage = trainer.lastMessageId ?: messageId
+        if (trainer.checkAnswer(data.substringAfter(CALLBACK_DATA_ANSWER_PREFIX).toInt())) {
+            bot.deleteMessage(chatId, idOfMessage)
+            val messageWithPhoto = bot.sendPhoto(
+                trainer.question?.correctAnswer?.photoId, trainer.question?.correctAnswer?.photo,
+                chatId,
+                "Правильно! ${trainer.question?.correctAnswer?.original} - " +
+                        "${trainer.question?.correctAnswer?.translate}"
+            )
+            trainer.lastMessageId = messageWithPhoto?.id
+        } else {
+            bot.deleteMessage(chatId, idOfMessage)
+            val messageWithPhoto = bot.sendPhoto(
+                trainer.question?.correctAnswer?.photoId, trainer.question?.correctAnswer?.photo,
+                chatId,
+                "Не правильно: ${trainer.question?.correctAnswer?.original} - " +
+                        "${trainer.question?.correctAnswer?.translate}"
+            )
+            trainer.lastMessageId = messageWithPhoto?.id
+        }
         Thread.sleep(MILLIS)
-        checkNextQuestionAndSend(bot, trainer, chatId, messageId)
+        checkNextQuestionAndSend(bot, trainer, chatId, trainer.lastMessageId ?: messageId)
     }
 }
 

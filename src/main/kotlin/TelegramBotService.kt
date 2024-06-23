@@ -4,10 +4,17 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.File
 import java.io.InputStream
+import java.math.BigInteger
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
+import java.nio.charset.StandardCharsets
+import java.nio.file.Files
+import java.nio.file.Path
+import java.util.*
+import kotlin.collections.ArrayList
+import kotlin.collections.LinkedHashMap
 
 @Serializable
 data class SendMessageRequest(
@@ -15,8 +22,10 @@ data class SendMessageRequest(
     val chatId: Long,
     @SerialName("message_id")
     val messageId: Long = 0L,
+    @SerialName("photo")
+    val photo: String? = "",
     @SerialName("text")
-    val text: String?,
+    val text: String? = null,
     @SerialName("reply_markup")
     val replyMarkup: ReplyMarkup? = null,
 )
@@ -39,6 +48,12 @@ data class InlineKeyBoard(
 data class GetFileRequest(
     @SerialName("file_id")
     val fileId: String?,
+)
+
+@Serializable
+data class ResponseItem<T>(
+    @SerialName("result")
+    val result: T
 )
 
 class TelegramBotService(
@@ -251,6 +266,138 @@ class TelegramBotService(
             null
     }
 
+    fun sendQuestionWithPhoto(chatId: Long, hasSpoiler: Boolean = false, question: Question): Message? {
+        val urlSendMessage = "$API_BOT$botToken/sendPhoto"
+        val variantsOfAnswer = question.variants.mapIndexed { index, word ->
+            listOf(
+                InlineKeyBoard(
+                    text = word.translate,
+                    callbackData = CALLBACK_DATA_ANSWER_PREFIX + index
+                )
+            )
+        }.toMutableList()
+        val variantMenu = listOf(
+            InlineKeyBoard(
+                text = "в меню",
+                callbackData = DATA_MENU
+            )
+        )
+        variantsOfAnswer.add(variantMenu)
+        val data: MutableMap<String, Any> = LinkedHashMap()
+        data["chat_id"] = chatId.toString()
+        data["photo"] = question.correctAnswer.photoId ?: File(question.correctAnswer.photo)
+        data["caption"] = question.correctAnswer.original
+        data["has_spoiler"] = hasSpoiler
+        data["reply_markup"] = json.encodeToString(ReplyMarkup(variantsOfAnswer))
+        val boundary: String = BigInteger(35, Random()).toString()
+
+        val request = HttpRequest.newBuilder()
+            .uri(URI.create(urlSendMessage))
+            .postMultipartFormData(boundary, data)
+            .build()
+        val client: HttpClient = HttpClient.newBuilder().build()
+        val responseResult: Result<HttpResponse<String>> =
+            runCatching { client.send(request, HttpResponse.BodyHandlers.ofString()) }
+        return if (responseResult.isSuccess) {
+            responseResult.getOrNull()
+                ?.body()
+                ?.let {
+                    val result = runCatching { json.decodeFromString<ResponseItem<Message>>(it) }
+                    result.exceptionOrNull()?.let {
+                        println(it.printStackTrace())
+                    }
+                    question.correctAnswer.photoId = result.getOrNull()?.result?.photo?.get(1)?.fileId.toString()
+                    result.getOrNull()?.result
+                }
+        } else {
+            null
+        }
+    }
+
+    fun sendPhoto(fileId: String?, file: String?, chatId: Long, caption: String, hasSpoiler: Boolean = false): Message? {
+        val data: MutableMap<String, Any> = LinkedHashMap()
+        data["chat_id"] = chatId.toString()
+        data["photo"] = fileId ?: File(file)
+        data["caption"] = caption
+        data["has_spoiler"] = hasSpoiler
+        val boundary: String = BigInteger(35, Random()).toString()
+
+        val request = HttpRequest.newBuilder()
+            .uri(URI.create("$API_BOT$botToken/sendPhoto"))
+            .postMultipartFormData(boundary, data)
+            .build()
+        val client: HttpClient = HttpClient.newBuilder().build()
+        val responseResult: Result<HttpResponse<String>> =
+            runCatching { client.send(request, HttpResponse.BodyHandlers.ofString()) }
+        return if (responseResult.isSuccess) {
+            responseResult.getOrNull()
+                ?.body()
+                ?.let {
+                    val result = runCatching { json.decodeFromString<ResponseItem<Message>>(it) }
+                    result.exceptionOrNull()?.let {
+                        println(it.printStackTrace())
+                    }
+                    result.getOrNull()?.result
+                }
+        } else {
+            null
+        }
+    }
+
+    private fun HttpRequest.Builder.postMultipartFormData(
+        boundary: String,
+        data: Map<String, Any>
+    ): HttpRequest.Builder {
+        val byteArrays = ArrayList<ByteArray>()
+        val separator = "--$boundary\r\nContent-Disposition: form-data; name=".toByteArray(StandardCharsets.UTF_8)
+
+        for (entry in data.entries) {
+            byteArrays.add(separator)
+            when (entry.value) {
+                is File -> {
+                    val file = entry.value as File
+                    val path = Path.of(file.toURI())
+                    val mimeType = Files.probeContentType(path)
+                    byteArrays.add(
+                        "\"${entry.key}\"; filename=\"${path.fileName}\"\r\nContent-Type: $mimeType\r\n\r\n".toByteArray(
+                            StandardCharsets.UTF_8
+                        )
+                    )
+                    byteArrays.add(Files.readAllBytes(path))
+                    byteArrays.add("\r\n".toByteArray(StandardCharsets.UTF_8))
+                }
+
+                else -> byteArrays.add("\"${entry.key}\"\r\n\r\n${entry.value}\r\n".toByteArray(StandardCharsets.UTF_8))
+            }
+        }
+        byteArrays.add("--$boundary--".toByteArray(StandardCharsets.UTF_8))
+
+        this.header("Content-Type", "multipart/form-data;boundary=$boundary")
+            .POST(HttpRequest.BodyPublishers.ofByteArrays(byteArrays))
+        return this
+    }
+
+    fun deleteMessage(chatId: Long, messageId: Long): String? {
+        val urlSendMessage = "$API_BOT$botToken/deleteMessage"
+        val requestBody = SendMessageRequest(
+            chatId = chatId,
+            messageId = messageId,
+        )
+        val requestBodyString = json.encodeToString(requestBody)
+        val request: HttpRequest = HttpRequest.newBuilder().uri(URI.create(urlSendMessage))
+            .header("Content-type", "application/json")
+            .POST(HttpRequest.BodyPublishers.ofString(requestBodyString))
+            .build()
+
+        val responseResult: Result<HttpResponse<String>> =
+            runCatching { client.send(request, HttpResponse.BodyHandlers.ofString()) }
+
+        return if (responseResult.isSuccess)
+            responseResult.getOrNull()?.body()
+        else
+            null
+    }
+
     fun getFile(fileId: String): GetFileResponse? {
         val urlGetFile = "$API_BOT$botToken/getFile"
         println(urlGetFile)
@@ -261,7 +408,6 @@ class TelegramBotService(
             .header("Content-type", "application/json")
             .POST(HttpRequest.BodyPublishers.ofString(requestBodyString))
             .build()
-
         val responseResult: Result<HttpResponse<String>> =
             runCatching { client.send(request, HttpResponse.BodyHandlers.ofString()) }
         return if (responseResult.isSuccess)
