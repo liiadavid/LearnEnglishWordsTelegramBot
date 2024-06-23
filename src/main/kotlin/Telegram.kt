@@ -1,5 +1,6 @@
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import java.io.File
 
 @Serializable
 data class Update(
@@ -27,7 +28,43 @@ data class Message(
     val chat: Chat,
     @SerialName("photo")
     val photo: Array<Photo>? = null,
+    @SerialName("document")
+    val document: Document? = null,
 )
+
+@Serializable
+data class Document(
+    @SerialName("file_name")
+    var fileName: String,
+    @SerialName("mime_type")
+    val mimeType: String,
+    @SerialName("file_id")
+    val fileId: String,
+    @SerialName("file_unique_id")
+    val fileUniqueId: String,
+    @SerialName("file_size")
+    val fileSize: Long,
+)
+
+@Serializable
+data class GetFileResponse(
+    @SerialName("ok")
+    val ok: Boolean,
+    @SerialName("result")
+    val result: TelegramFile? = null,
+)
+
+@Serializable
+data class TelegramFile(
+    @SerialName("file_id")
+    val fileId: String,
+    @SerialName("file_unique_id")
+    val fileUniqueId: String,
+    @SerialName("file_size")
+    val fileSize: Long,
+    @SerialName("file_path")
+    val filePath: String,
+)  
 
 @Serializable
 data class Photo(
@@ -88,10 +125,28 @@ fun handleUpdate(
     trainers: HashMap<Long, LearnWordsTrainer>,
 ) {
     val chatId: Long = update.message?.chat?.id ?: update.callbackQuery?.message?.chat?.id ?: return
+    val trainer = trainers.getOrPut(chatId) { LearnWordsTrainer("$chatId.txt") }
     val messageId: Long = update.callbackQuery?.message?.id ?: 0
     val message: String? = update.message?.text
     val data: String? = update.callbackQuery?.data
-    val trainer = trainers.getOrPut(chatId) { LearnWordsTrainer("$chatId.txt") }
+    val document = update.message?.document
+    if (document != null) {
+        val response: GetFileResponse? = bot.getFile(document.fileId)
+        response?.result?.let {
+            val pathName = "$chatId${document.fileName}"
+            if (File(pathName).exists()) {
+                bot.sendMessage(chatId, "Файл уже существует")
+                Thread.sleep(MILLIS)
+                bot.sendMenu(chatId)
+            } else {
+                bot.downloadFile(it.filePath, pathName)
+                trainer.editDictionary(pathName)
+                bot.sendMessage(chatId, "Файл загружен и словарь обновлён")
+                Thread.sleep(MILLIS)
+                bot.sendMenu(chatId)
+            }
+        }
+    }
 
     if (message?.lowercase()?.startsWith(DATA_MENU) == true ||
         data?.lowercase()?.startsWith(DATA_MENU) == true

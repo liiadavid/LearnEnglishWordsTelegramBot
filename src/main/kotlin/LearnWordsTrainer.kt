@@ -107,4 +107,17 @@ class LearnWordsTrainer(
             wordsFile.appendText("${word.original}|${word.translate}|${word.correctAnswersCount}|${word.photo}|${word.photoId ?: null}\n")
         }
     }
+
+    fun editDictionary(newWordsFileName: String) {
+        val newWordsFile = File(newWordsFileName)
+        newWordsFile.forEachLine { line ->
+            val word = line.split("|")
+            val wordClass = Word(word[0], word[1], word[2].toIntOrNull() ?: 0)
+            if (!dictionary.contains(wordClass)) {
+                dictionary += (wordClass)
+            }
+        }
+        newWordsFile.delete()
+        saveDictionary()
+    }
 }

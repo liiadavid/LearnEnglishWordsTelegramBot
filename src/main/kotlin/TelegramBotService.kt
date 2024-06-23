@@ -3,6 +3,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.File
+import java.io.InputStream
 import java.math.BigInteger
 import java.net.URI
 import java.net.http.HttpClient
@@ -41,6 +42,12 @@ data class InlineKeyBoard(
     val callbackData: String,
     @SerialName("text")
     val text: String,
+)
+
+@Serializable
+data class GetFileRequest(
+    @SerialName("file_id")
+    val fileId: String?,
 )
 
 @Serializable
@@ -390,7 +397,42 @@ class TelegramBotService(
         else
             null
     }
+
+    fun getFile(fileId: String): GetFileResponse? {
+        val urlGetFile = "$API_BOT$botToken/getFile"
+        println(urlGetFile)
+        val requestBody = GetFileRequest(fileId = fileId)
+        val requestBodyString = json.encodeToString(requestBody)
+        val request: HttpRequest = HttpRequest.newBuilder()
+            .uri(URI.create(urlGetFile))
+            .header("Content-type", "application/json")
+            .POST(HttpRequest.BodyPublishers.ofString(requestBodyString))
+            .build()
+        val responseResult: Result<HttpResponse<String>> =
+            runCatching { client.send(request, HttpResponse.BodyHandlers.ofString()) }
+        return if (responseResult.isSuccess)
+            responseResult.getOrNull()?.let { json.decodeFromString(it.body()) }
+        else
+            null
+    }
+
+    fun downloadFile(filePath: String, fileName: String) {
+        val urlGetFile = "$BOT_FILE_URL$botToken/$filePath"
+        println(urlGetFile)
+        val request = HttpRequest
+            .newBuilder()
+            .uri(URI.create(urlGetFile))
+            .GET()
+            .build()
+        val response: HttpResponse<InputStream> = HttpClient
+            .newHttpClient()
+            .send(request, HttpResponse.BodyHandlers.ofInputStream())
+        println("status code: " + response.statusCode())
+        val body: InputStream = response.body()
+        body.copyTo(File(fileName).outputStream(), 16 * 1024)
+    }
 }
 
 const val CALLBACK_DATA_ANSWER_PREFIX = "answer_"
 const val API_BOT = "https://api.telegram.org/bot"
+const val BOT_FILE_URL = "https://api.telegram.org/file/bot"
