@@ -12,6 +12,8 @@ data class Word(
     val original: String,
     val translate: String,
     var correctAnswersCount: Int = 0,
+    val photo: String,
+    var photoId: String?,
 )
 
 data class Question(
@@ -22,10 +24,12 @@ data class Question(
 class LearnWordsTrainer(
     private val fileName: String = "words.txt",
     private val learnedAnswerCount: Int = 3,
-    private val countOfQuestionWords: Int = 4
+    private val countOfQuestionWords: Int = 4,
+    var lastMessageId: Long? = null,
 ) {
     var question: Question? = null
-    private val dictionary = loadDictionary()
+    private val photoId: String? = null
+    private val dictionary = loadDictionary(photoId)
 
     fun getStatistics(): Statistics {
         val numberOfLearnedWords = dictionary.filter { it.correctAnswersCount >= learnedAnswerCount }.size
@@ -71,15 +75,24 @@ class LearnWordsTrainer(
         } ?: false
     }
 
-    private fun loadDictionary(): List<Word> {
-        try {val wordsFile = File(fileName)
+    fun loadDictionary(photoId: String?): List<Word> {
+        try {
+            val wordsFile = File(fileName)
             if (!wordsFile.exists()) {
                 File("words.txt").copyTo(wordsFile)
             }
             val dictionary = mutableListOf<Word>()
             wordsFile.forEachLine { line ->
                 val word = line.split("|")
-                dictionary.add(Word(word[0], word[1], word[2].toIntOrNull() ?: 0))
+                dictionary.add(
+                    Word(
+                        original = word[0],
+                        translate = word[1],
+                        correctAnswersCount = word[2].toIntOrNull() ?: 0,
+                        photo = "wordspictures/${word[0]}.jpg",
+                        photoId = photoId
+                    )
+                )
             }
             return dictionary
         } catch (e: IndexOutOfBoundsException) {
@@ -87,11 +100,11 @@ class LearnWordsTrainer(
         }
     }
 
-    private fun saveDictionary() {
+    fun saveDictionary() {
         val wordsFile = File(fileName)
         wordsFile.writeText("")
         dictionary.forEach { word ->
-            wordsFile.appendText("${word.original}|${word.translate}|${word.correctAnswersCount}\n")
+            wordsFile.appendText("${word.original}|${word.translate}|${word.correctAnswersCount}|${word.photo}|${word.photoId ?: null}\n")
         }
     }
 }
